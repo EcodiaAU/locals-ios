@@ -125,7 +125,7 @@ struct MerchantDetailView: View {
                     }
                 }
                 Text(note)
-                    .font(theme.bodyFont(DesignTokens.Size.base, italic: false))
+                    .font(theme.bodyFont(DesignTokens.Size.base))
                     .italic()
                     .foregroundStyle(theme.foreground)
                     .padding(DesignTokens.Space.lg)
