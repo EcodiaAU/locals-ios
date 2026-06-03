@@ -1,6 +1,6 @@
 name: Locals
 options:
-  bundleIdPrefix: au.ecodia.locals
+  bundleIdPrefix: au.ecodia.local
   deploymentTarget:
     iOS: "17.0"
   developmentLanguage: en
@@ -68,7 +68,7 @@ targets:
           - location
         CFBundleURLTypes:
           - CFBundleTypeRole: Editor
-            CFBundleURLName: au.ecodia.locals
+            CFBundleURLName: au.ecodia.local
             CFBundleURLSchemes:
               - locals
         UIAppFonts:
@@ -79,7 +79,7 @@ targets:
         LocalsSupabaseAnonKey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwdW1nY3hwd2ZpZ3Rwb3RheWpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyOTEwODIsImV4cCI6MjA5NTg2NzA4Mn0.8FhySa1u2mb5z_3g1wFVwQFdgFqsWpZeKGy0gKItMP4
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: au.ecodia.locals
+        PRODUCT_BUNDLE_IDENTIFIER: au.ecodia.local
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_BITCODE: NO
         SUPPORTS_MACCATALYST: NO
