@@ -7,27 +7,13 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if !auth.isReady {
-                splash
-            } else if !session.hasOnboarded {
+            if !session.hasOnboarded {
                 OnboardingView()
             } else {
                 tabs
             }
         }
-        .animation(.easeInOut(duration: DesignTokens.Motion.base), value: auth.isReady)
         .animation(.easeInOut(duration: DesignTokens.Motion.base), value: session.hasOnboarded)
-    }
-
-    private var splash: some View {
-        ZStack {
-            LocalsTheme.bg.ignoresSafeArea()
-            VStack(spacing: DesignTokens.Space.lg) {
-                Text("Locals")
-                    .font(LocalsTheme.display(DesignTokens.Size.h1))
-                    .foregroundStyle(LocalsTheme.fg)
-            }
-        }
     }
 
     private var tabs: some View {

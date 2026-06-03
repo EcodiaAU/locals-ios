@@ -14,7 +14,6 @@ struct MerchantDashboardView: View {
                     if let m = effectiveSelection {
                         actionsRow(for: m)
                         rewardsAdminLink(for: m)
-                        scanCodeLink(for: m)
                         billingLink(for: m)
                     }
                 }
@@ -93,16 +92,6 @@ struct MerchantDashboardView: View {
             BigActionRow(title: "Rewards",
                          subtitle: "Add or change what customers get",
                          system: "gift")
-        }
-    }
-
-    private func scanCodeLink(for m: OwnedMerchant) -> some View {
-        NavigationLink {
-            ConsumeCodeView(merchantId: m.merchant_id)
-        } label: {
-            BigActionRow(title: "Use a code",
-                         subtitle: "Type the customer's 6-character code",
-                         system: "qrcode.viewfinder")
         }
     }
 

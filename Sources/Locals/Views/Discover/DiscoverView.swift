@@ -1,9 +1,12 @@
 import SwiftUI
 import MapKit
+import CoreLocation
 
-/// The main customer surface. Map at top, swipe-up sheet of merchants
-/// ordered by distance below. Pure MapKit - native clustering, look-around
-/// where available, the user's blue dot, all the iOS-native polish.
+/// Discover - the customer surface. Edge-to-edge MapKit with native
+/// controls anchored inside the safe area, a proper iOS sheet (with
+/// real detents and a grabber that drags) for the merchant list, and
+/// distance-based clustering so a busy region reads as a few clean
+/// counts instead of a wall of overlapping pills.
 struct DiscoverView: View {
     @EnvironmentObject var session: AppSession
     @EnvironmentObject var location: LocationManager
@@ -20,7 +23,11 @@ struct DiscoverView: View {
             span: MKCoordinateSpan(latitudeDelta: 0.4, longitudeDelta: 0.4)
         )
     )
+    @State private var visibleSpan: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0.4, longitudeDelta: 0.4)
+    @State private var visibleCenter: CLLocationCoordinate2D = LocationManager.defaultCoordinate
     @State private var pushedSlug: String?
+    @State private var sheetDetent: PresentationDetent = .fraction(0.35)
+    @State private var focusedMerchantId: UUID?
 
     var filtered: [MerchantNear] {
         guard let c = selectedCategory else { return nearby }
@@ -29,27 +36,36 @@ struct DiscoverView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
-                map
-                bottomSheet
-            }
-            .background(LocalsTheme.bg.ignoresSafeArea())
-            .navigationDestination(isPresented: Binding(
-                get: { pushedSlug != nil },
-                set: { if !$0 { pushedSlug = nil } }
-            )) {
-                if let slug = pushedSlug {
-                    MerchantDetailView(slug: slug)
+            map
+                .ignoresSafeArea()
+                .overlay(alignment: .topTrailing) { topControls }
+                .navigationDestination(isPresented: Binding(
+                    get: { pushedSlug != nil },
+                    set: { if !$0 { pushedSlug = nil } }
+                )) {
+                    if let slug = pushedSlug {
+                        MerchantDetailView(slug: slug)
+                    }
                 }
-            }
-            .toolbar(.hidden, for: .navigationBar)
-            .task { await reload() }
-            .onChange(of: location.coordinate.latitude) { _, _ in
-                Task { await reload() }
-            }
-            .onChange(of: session.pendingMerchantSlug) { _, slug in
-                if let slug { pushedSlug = slug; session.pendingMerchantSlug = nil }
-            }
+                .toolbar(.hidden, for: .navigationBar)
+                .sheet(isPresented: .constant(true)) {
+                    bottomSheet
+                        .presentationDetents(
+                            [.height(96), .fraction(0.35), .large],
+                            selection: $sheetDetent
+                        )
+                        .presentationDragIndicator(.visible)
+                        .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.35)))
+                        .presentationCornerRadius(DesignTokens.Radius.xxl)
+                        .interactiveDismissDisabled(true)
+                }
+                .task { await reload() }
+                .onChange(of: location.coordinate.latitude) { _, _ in
+                    Task { await reload() }
+                }
+                .onChange(of: session.pendingMerchantSlug) { _, slug in
+                    if let slug { pushedSlug = slug; session.pendingMerchantSlug = nil }
+                }
         }
     }
 
@@ -58,31 +74,184 @@ struct DiscoverView: View {
     private var map: some View {
         Map(position: $cameraPosition, interactionModes: .all) {
             UserAnnotation()
-            ForEach(filtered) { merchant in
-                Annotation(merchant.name, coordinate: coordinate(for: merchant)) {
-                    Button {
-                        Haptics.tap()
-                        pushedSlug = merchant.slug
-                    } label: {
-                        MerchantPin(merchant: merchant)
+
+            // Clustered representation: one Annotation per cluster. A cluster
+            // of size 1 renders as a labelled pin, anything bigger as a
+            // count circle. The clustering radius scales with the visible
+            // span so zooming in unfolds groups naturally.
+            ForEach(clusters, id: \.id) { cluster in
+                Annotation("", coordinate: cluster.coordinate) {
+                    if cluster.merchants.count == 1, let m = cluster.merchants.first {
+                        MerchantPin(merchant: m, focused: focusedMerchantId == m.id)
+                            .onTapGesture { tapPin(m) }
+                    } else {
+                        ClusterPin(count: cluster.merchants.count)
+                            .onTapGesture { zoomTo(cluster) }
                     }
                 }
             }
         }
         .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
-        .mapControls {
-            MapUserLocationButton()
-            MapCompass()
+        .onMapCameraChange(frequency: .onEnd) { ctx in
+            visibleSpan = ctx.region.span
+            visibleCenter = ctx.region.center
         }
-        .ignoresSafeArea(edges: [.top])
+    }
+
+    // MARK: - Top controls (native, inside safe area)
+
+    private var topControls: some View {
+        HStack(spacing: DesignTokens.Space.sm) {
+            Spacer()
+            Button {
+                Haptics.tap()
+                location.requestPermissionIfNeeded()
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    cameraPosition = .region(MKCoordinateRegion(
+                        center: location.coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                    ))
+                }
+            } label: {
+                Image(systemName: "location.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(LocalsTheme.accent)
+                    .frame(width: 44, height: 44)
+                    .background(.thinMaterial)
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+            }
+        }
+        .padding(.horizontal, DesignTokens.Space.md)
+        .padding(.top, DesignTokens.Space.sm)
+    }
+
+    // MARK: - Bottom sheet
+
+    private var bottomSheet: some View {
+        VStack(spacing: 0) {
+            header
+                .padding(.horizontal, DesignTokens.Space.lg)
+                .padding(.top, DesignTokens.Space.sm)
+                .padding(.bottom, DesignTokens.Space.md)
+            Divider().background(LocalsTheme.borderSubtle)
+            list
+        }
+        .background(LocalsTheme.bg)
+    }
+
+    private var header: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(filtered.isEmpty ? "Nothing here" : "\(filtered.count) nearby")
+                    .font(LocalsTheme.body(DesignTokens.Size.base, weight: .semibold))
+                    .foregroundStyle(LocalsTheme.fg)
+                Text(categorySubtitle)
+                    .font(LocalsTheme.body(DesignTokens.Size.xs))
+                    .foregroundStyle(LocalsTheme.fgMuted)
+            }
+            Spacer()
+            categoryMenu
+        }
+    }
+
+    private var categorySubtitle: String {
+        if let c = selectedCategory { return "Showing \(c.label.lowercased())" }
+        return "All categories"
+    }
+
+    /// Filter as a native Menu - one tap-target instead of a horizontal
+    /// pill row. SwiftUI renders this as a system popup on tap, with
+    /// checkmarks on the active row.
+    private var categoryMenu: some View {
+        Menu {
+            Button {
+                selectedCategory = nil
+            } label: {
+                Label("All", systemImage: selectedCategory == nil ? "checkmark" : "")
+            }
+            ForEach(MerchantCategory.allCases.filter { $0 != .other }) { cat in
+                Button {
+                    selectedCategory = cat
+                } label: {
+                    Label(cat.label, systemImage: selectedCategory == cat ? "checkmark" : "")
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "line.3.horizontal.decrease")
+                Text(selectedCategory?.label ?? "Filter")
+            }
+            .font(LocalsTheme.body(DesignTokens.Size.sm, weight: .medium))
+            .padding(.horizontal, DesignTokens.Space.md)
+            .padding(.vertical, DesignTokens.Space.xs)
+            .background(LocalsTheme.bgElevated)
+            .foregroundStyle(LocalsTheme.fg)
+            .clipShape(Capsule())
+        }
+    }
+
+    private var list: some View {
+        Group {
+            if loading && nearby.isEmpty {
+                ProgressView().padding(DesignTokens.Space.xl)
+            } else if filtered.isEmpty {
+                VStack(spacing: DesignTokens.Space.sm) {
+                    Text("No businesses in this category")
+                        .font(LocalsTheme.serif(DesignTokens.Size.lg, italic: true))
+                    Text("Try All, or scroll the map.")
+                        .font(LocalsTheme.body(DesignTokens.Size.sm))
+                        .foregroundStyle(LocalsTheme.fgMuted)
+                }
+                .padding(DesignTokens.Space.xl)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(filtered) { m in
+                            NearbyRow(merchant: m, focused: focusedMerchantId == m.id) {
+                                tapRow(m)
+                            }
+                            Divider().background(LocalsTheme.borderSubtle)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Clustering
+
+    /// Group merchants into clusters by screen-pixel distance. Two
+    /// merchants are in the same cluster when their map coordinates fall
+    /// within `clusterRadius` of each other at the current zoom level.
+    /// Greedy O(n^2) is fine at v1 sizes (<=200 merchants in view).
+    private var clusters: [MerchantCluster] {
+        let radiusDeg = visibleSpan.latitudeDelta / 18  // tighter as you zoom in
+        var groups: [MerchantCluster] = []
+        for m in filtered {
+            let coord = coordinate(for: m)
+            if let i = groups.firstIndex(where: { hypot($0.coordinate.latitude - coord.latitude, $0.coordinate.longitude - coord.longitude) < radiusDeg }) {
+                groups[i].merchants.append(m)
+                groups[i].coordinate = centroid(groups[i].merchants.map { coordinate(for: $0) })
+            } else {
+                groups.append(MerchantCluster(id: m.id, coordinate: coord, merchants: [m]))
+            }
+        }
+        return groups
+    }
+
+    private func centroid(_ coords: [CLLocationCoordinate2D]) -> CLLocationCoordinate2D {
+        guard !coords.isEmpty else { return visibleCenter }
+        let lat = coords.map(\.latitude).reduce(0, +) / Double(coords.count)
+        let lng = coords.map(\.longitude).reduce(0, +) / Double(coords.count)
+        return CLLocationCoordinate2D(latitude: lat, longitude: lng)
     }
 
     /// Approximate a merchant coordinate from its distance + user's
-    /// location. The merchants_near RPC returns distance_m but not lat/lng
-    /// (the merchant geo is gated by RLS). We fan annotations out around
-    /// the user with a deterministic offset by id - this is enough for the
-    /// map to feel populated without revealing exact merchant geometry on
-    /// the wire. The detail view shows the real address text.
+    /// location. The merchants_near RPC returns distance_m but not raw
+    /// lat/lng (the geo column is gated by RLS). We fan annotations out
+    /// around the user via a deterministic hash-based bearing - same id
+    /// always lands at the same point so the map is stable across reloads.
     private func coordinate(for m: MerchantNear) -> CLLocationCoordinate2D {
         let user = location.coordinate
         let metres = m.distance_m
@@ -97,77 +266,50 @@ struct DiscoverView: View {
         )
     }
 
-    // MARK: - Sheet
+    // MARK: - Interactions
 
-    private var bottomSheet: some View {
-        VStack(spacing: 0) {
-            grabber
-            categoryRow
-                .padding(.horizontal, DesignTokens.Space.lg)
-                .padding(.bottom, DesignTokens.Space.md)
-
-            list
+    private func tapRow(_ m: MerchantNear) {
+        Haptics.tap()
+        focusedMerchantId = m.id
+        let target = coordinate(for: m)
+        withAnimation(.easeInOut(duration: 0.35)) {
+            cameraPosition = .region(MKCoordinateRegion(
+                center: target,
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            ))
+            sheetDetent = .height(96)
         }
-        .background(LocalsTheme.bg)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xxl, style: .continuous))
-        .shadow(color: .black.opacity(0.08), radius: 16, y: -4)
-        .frame(maxHeight: 460)
-        .padding(.bottom, 49)
     }
 
-    private var grabber: some View {
-        Capsule()
-            .fill(LocalsTheme.borderSubtle)
-            .frame(width: 36, height: 5)
-            .padding(.top, DesignTokens.Space.sm)
-            .padding(.bottom, DesignTokens.Space.md)
-    }
-
-    private var categoryRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DesignTokens.Space.sm) {
-                CategoryChip(label: "All", isSelected: selectedCategory == nil) {
-                    Haptics.tap()
-                    selectedCategory = nil
-                }
-                ForEach(MerchantCategory.allCases) { cat in
-                    if cat != .other {
-                        CategoryChip(label: cat.label, isSelected: selectedCategory == cat) {
-                            Haptics.tap()
-                            selectedCategory = (selectedCategory == cat) ? nil : cat
-                        }
-                    }
-                }
+    private func tapPin(_ m: MerchantNear) {
+        Haptics.tap()
+        if focusedMerchantId == m.id {
+            // Second tap on the same pin opens detail.
+            pushedSlug = m.slug
+        } else {
+            focusedMerchantId = m.id
+            withAnimation(.easeInOut(duration: 0.25)) {
+                cameraPosition = .region(MKCoordinateRegion(
+                    center: coordinate(for: m),
+                    span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+                ))
             }
         }
     }
 
-    private var list: some View {
-        Group {
-            if loading && nearby.isEmpty {
-                ProgressView().padding(DesignTokens.Space.xl)
-            } else if filtered.isEmpty {
-                VStack(spacing: DesignTokens.Space.sm) {
-                    Text("No businesses here yet")
-                        .font(LocalsTheme.serif(DesignTokens.Size.lg, italic: true))
-                    Text("Try widening the search, or scroll the map.")
-                        .font(LocalsTheme.body(DesignTokens.Size.sm))
-                        .foregroundStyle(LocalsTheme.fgMuted)
-                }
-                .padding(DesignTokens.Space.xl)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(filtered) { m in
-                            NearbyRow(merchant: m) {
-                                Haptics.tap()
-                                pushedSlug = m.slug
-                            }
-                            Divider().background(LocalsTheme.borderSubtle)
-                        }
-                    }
-                }
-            }
+    private func zoomTo(_ cluster: MerchantCluster) {
+        Haptics.tap()
+        let coords = cluster.merchants.map(coordinate(for:))
+        let latMin = coords.map(\.latitude).min()!
+        let latMax = coords.map(\.latitude).max()!
+        let lngMin = coords.map(\.longitude).min()!
+        let lngMax = coords.map(\.longitude).max()!
+        let span = MKCoordinateSpan(
+            latitudeDelta: max(0.003, (latMax - latMin) * 1.4),
+            longitudeDelta: max(0.003, (lngMax - lngMin) * 1.4)
+        )
+        withAnimation(.easeInOut(duration: 0.35)) {
+            cameraPosition = .region(MKCoordinateRegion(center: cluster.coordinate, span: span))
         }
     }
 
@@ -190,28 +332,19 @@ struct DiscoverView: View {
     }
 }
 
-// MARK: - Subviews
+// MARK: - Cluster model
 
-struct CategoryChip: View {
-    let label: String
-    let isSelected: Bool
-    let onTap: () -> Void
-    var body: some View {
-        Button(action: onTap) {
-            Text(label)
-                .font(LocalsTheme.body(DesignTokens.Size.sm, weight: .medium))
-                .padding(.horizontal, DesignTokens.Space.lg)
-                .padding(.vertical, DesignTokens.Space.sm)
-                .background(isSelected ? LocalsTheme.fg : LocalsTheme.bgElevated)
-                .foregroundStyle(isSelected ? LocalsTheme.bg : LocalsTheme.fg)
-                .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-    }
+struct MerchantCluster: Identifiable {
+    let id: UUID
+    var coordinate: CLLocationCoordinate2D
+    var merchants: [MerchantNear]
 }
+
+// MARK: - Subviews
 
 struct NearbyRow: View {
     let merchant: MerchantNear
+    let focused: Bool
     let onTap: () -> Void
     var body: some View {
         Button(action: onTap) {
@@ -237,21 +370,23 @@ struct NearbyRow: View {
                             .foregroundStyle(LocalsTheme.fgMuted)
                             .lineLimit(1)
                     }
-                    if let crowd = merchant.crowd_last_hour, crowd > 0 {
-                        Text("\(crowd) here in the last hour")
-                            .font(LocalsTheme.body(DesignTokens.Size.xs, weight: .medium))
-                            .foregroundStyle(LocalsTheme.accentDeep)
-                            .padding(.top, 2)
-                    }
                 }
                 Spacer()
-                Text(merchant.distanceLabel)
-                    .font(LocalsTheme.mono(DesignTokens.Size.xs))
-                    .foregroundStyle(LocalsTheme.fgMuted)
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(merchant.distanceLabel)
+                        .font(LocalsTheme.mono(DesignTokens.Size.xs))
+                        .foregroundStyle(LocalsTheme.fgMuted)
+                    if focused {
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(LocalsTheme.accent)
+                    }
+                }
             }
             .padding(.horizontal, DesignTokens.Space.lg)
             .padding(.vertical, DesignTokens.Space.md)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .background(focused ? LocalsTheme.bgElevated : LocalsTheme.bg)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -270,18 +405,38 @@ struct NearbyRow: View {
 
 struct MerchantPin: View {
     let merchant: MerchantNear
+    let focused: Bool
     var body: some View {
-        VStack(spacing: 0) {
-            Text(merchant.name)
-                .font(LocalsTheme.body(DesignTokens.Size.xs, weight: .semibold))
-                .lineLimit(1)
-                .padding(.horizontal, DesignTokens.Space.sm)
-                .padding(.vertical, 4)
-                .background(MerchantTheme.background(for: merchant.theme_color))
-                .foregroundStyle(MerchantTheme.foreground(for: merchant.theme_color))
-                .clipShape(Capsule())
-                .overlay(Capsule().strokeBorder(LocalsTheme.fg.opacity(0.5), lineWidth: 0.5))
-        }
-        .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+        Text(merchant.name)
+            .font(LocalsTheme.body(DesignTokens.Size.xs, weight: .semibold))
+            .lineLimit(1)
+            .padding(.horizontal, DesignTokens.Space.sm)
+            .padding(.vertical, 5)
+            .background(MerchantTheme.background(for: merchant.theme_color))
+            .foregroundStyle(MerchantTheme.foreground(for: merchant.theme_color))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule().strokeBorder(
+                    focused ? LocalsTheme.accent : LocalsTheme.fg.opacity(0.5),
+                    lineWidth: focused ? 2 : 0.5
+                )
+            )
+            .scaleEffect(focused ? 1.08 : 1.0)
+            .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+            .animation(.easeInOut(duration: 0.2), value: focused)
+    }
+}
+
+struct ClusterPin: View {
+    let count: Int
+    var body: some View {
+        Text("\(count)")
+            .font(LocalsTheme.body(DesignTokens.Size.sm, weight: .bold))
+            .foregroundStyle(LocalsTheme.onAccent)
+            .frame(width: 38, height: 38)
+            .background(LocalsTheme.accent)
+            .clipShape(Circle())
+            .overlay(Circle().strokeBorder(.white.opacity(0.8), lineWidth: 2))
+            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
     }
 }

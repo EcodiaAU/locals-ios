@@ -47,7 +47,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This permanently removes your account, your saved businesses, and your codes. You can't undo this.")
+                Text("This permanently removes your account, your business listings, and any active billing. You can't undo this.")
             }
         }
     }

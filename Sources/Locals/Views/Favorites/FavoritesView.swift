@@ -2,38 +2,27 @@ import SwiftUI
 
 struct FavoritesView: View {
     @EnvironmentObject var favorites: FavoriteService
-    @EnvironmentObject var auth: AuthService
-
-    @State private var rows: [FavoriteWithMerchant] = []
-    @State private var loading = false
     @State private var pushedSlug: String?
 
     var body: some View {
         NavigationStack {
             Group {
-                if auth.currentUser == nil {
-                    signInWall
-                } else if loading && rows.isEmpty {
-                    ProgressView()
-                } else if rows.isEmpty {
+                if favorites.snapshots.isEmpty {
                     empty
                 } else {
                     List {
-                        ForEach(rows) { row in
+                        ForEach(favorites.sortedByRecent) { fav in
                             Button {
                                 Haptics.tap()
-                                pushedSlug = row.merchants?.slug
+                                pushedSlug = fav.slug
                             } label: {
-                                FavoriteRowView(row: row)
+                                FavoriteRowView(fav: fav)
                             }
                             .listRowBackground(LocalsTheme.bg)
                             .listRowSeparatorTint(LocalsTheme.borderSubtle)
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) {
-                                    Task {
-                                        await favorites.remove(row.merchant_id)
-                                        await reload()
-                                    }
+                                    favorites.remove(fav.id)
                                 } label: {
                                     Label("Remove", systemImage: "heart.slash")
                                 }
@@ -42,13 +31,11 @@ struct FavoritesView: View {
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
-                    .refreshable { await reload() }
                 }
             }
             .background(LocalsTheme.bg)
             .navigationTitle("Saved")
             .navigationBarTitleDisplayMode(.large)
-            .task { await reload() }
             .navigationDestination(isPresented: Binding(
                 get: { pushedSlug != nil },
                 set: { if !$0 { pushedSlug = nil } }
@@ -68,45 +55,26 @@ struct FavoritesView: View {
         }
         .padding(DesignTokens.Space.xl)
     }
-
-    private var signInWall: some View {
-        VStack(spacing: DesignTokens.Space.md) {
-            Text("Sign in to keep favourites.")
-                .font(LocalsTheme.serif(DesignTokens.Size.lg, italic: true))
-            Text("Save businesses and use rewards from one tap.")
-                .font(LocalsTheme.body(DesignTokens.Size.sm))
-                .foregroundStyle(LocalsTheme.fgMuted)
-        }
-        .padding(DesignTokens.Space.xl)
-    }
-
-    @MainActor
-    private func reload() async {
-        guard auth.currentUser != nil else { return }
-        loading = true
-        defer { loading = false }
-        do { rows = try await favorites.list() } catch { }
-    }
 }
 
 struct FavoriteRowView: View {
-    let row: FavoriteWithMerchant
+    let fav: LocalFavorite
     var body: some View {
         HStack(spacing: DesignTokens.Space.md) {
             RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
-                .fill(MerchantTheme.background(for: row.merchants?.theme_color))
+                .fill(MerchantTheme.background(for: fav.theme_color))
                 .overlay(
                     RoundedRectangle(cornerRadius: DesignTokens.Radius.md, style: .continuous)
                         .strokeBorder(LocalsTheme.borderSubtle, lineWidth: 1)
                 )
                 .frame(width: 48, height: 48)
             VStack(alignment: .leading, spacing: 2) {
-                Text(row.merchants?.name ?? "")
+                Text(fav.name)
                     .font(LocalsTheme.body(DesignTokens.Size.base, weight: .semibold))
-                Text(row.merchants?.category?.capitalized ?? "")
+                Text(fav.category?.capitalized ?? "")
                     .font(LocalsTheme.body(DesignTokens.Size.xs))
                     .foregroundStyle(LocalsTheme.fgMuted)
-                if let addr = row.merchants?.address {
+                if let addr = fav.address {
                     Text(addr)
                         .font(LocalsTheme.body(DesignTokens.Size.xs))
                         .foregroundStyle(LocalsTheme.fgMuted)

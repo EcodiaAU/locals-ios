@@ -1,9 +1,12 @@
 import SwiftUI
 
+/// Informational reward row. Customers see what each business offers to
+/// Locals users, then mention it at the counter. No code, no friction,
+/// no extra POS step - businesses just honour what they have publicly
+/// committed to and track conversions through their own register.
 struct RewardRow: View {
     let reward: Reward
     let theme: MerchantTheme.Resolved
-    let onRedeem: () -> Void
 
     var body: some View {
         HStack(spacing: DesignTokens.Space.md) {
@@ -30,20 +33,10 @@ struct RewardRow: View {
                     Text(d)
                         .font(theme.bodyFont(DesignTokens.Size.sm))
                         .foregroundStyle(theme.muted)
-                        .lineLimit(2)
+                        .lineLimit(3)
                 }
             }
             Spacer()
-            Button(action: onRedeem) {
-                Text("Get code")
-                    .font(LocalsTheme.body(DesignTokens.Size.sm, weight: .semibold))
-                    .padding(.horizontal, DesignTokens.Space.lg)
-                    .padding(.vertical, DesignTokens.Space.sm)
-                    .background(theme.foreground)
-                    .foregroundStyle(theme.background)
-                    .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
         }
         .padding(DesignTokens.Space.lg)
         .frame(maxWidth: .infinity, alignment: .leading)

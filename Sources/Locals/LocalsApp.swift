@@ -7,7 +7,6 @@ struct LocalsApp: App {
     @StateObject private var location = LocationManager()
     @StateObject private var merchants = MerchantService()
     @StateObject private var rewards = RewardService()
-    @StateObject private var redemptions = RedemptionService()
     @StateObject private var favorites = FavoriteService()
     @StateObject private var owners = OwnerMerchantService()
     @StateObject private var billing = BillingService()
@@ -21,27 +20,21 @@ struct LocalsApp: App {
                 .environmentObject(location)
                 .environmentObject(merchants)
                 .environmentObject(rewards)
-                .environmentObject(redemptions)
                 .environmentObject(favorites)
                 .environmentObject(owners)
                 .environmentObject(billing)
                 .environmentObject(feedback)
                 .tint(LocalsTheme.accent)
                 .task {
+                    // Auth bootstrap is now merchant-only. The customer side
+                    // is anonymous - no signin wall on browse, favorites, or
+                    // detail. Sign-in is only invoked when the user taps
+                    // "Add your business" or opens the Merchant tab.
                     auth.onSignIn = { _ in
-                        Task {
-                            await favorites.refresh()
-                            await owners.refresh()
-                        }
-                    }
-                    auth.onSignOut = {
-                        Task { @MainActor in
-                            favorites.objectWillChange.send()
-                        }
+                        Task { await owners.refresh() }
                     }
                     await auth.bootstrap()
                     if auth.currentUser != nil {
-                        await favorites.refresh()
                         await owners.refresh()
                     }
                     location.requestPermissionIfNeeded()

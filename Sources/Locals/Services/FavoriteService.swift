@@ -1,78 +1,101 @@
+import SwiftUI
 import Foundation
-import Supabase
 
+/// Local-only favorites. Customer side is fully anonymous - no auth, no
+/// Supabase. Favorites live in UserDefaults as a JSON-encoded array of
+/// snapshots, so the Saved tab can render names + categories + theme
+/// colours offline without round-tripping for each row.
+///
+/// If/when accounts return (or we ship iCloud sync via NSUbiquitousKVStore),
+/// the migration is one-way upload: read this Set, mirror to the table,
+/// keep this as the source of truth.
 @MainActor
 final class FavoriteService: ObservableObject {
-    private let client: SupabaseClient
-    @Published private(set) var ids: Set<UUID> = []
+    @Published private(set) var snapshots: [LocalFavorite] = []
+    private let storageKey = "locals.favorites.v1"
 
-    init(client: SupabaseClient = .shared) {
-        self.client = client
+    init() {
+        load()
     }
 
-    /// Refresh the local Set on sign-in. RLS gates to the caller, so this
-    /// just selects merchant_id from favorites.
-    func refresh() async {
-        struct Row: Codable { let merchant_id: UUID }
-        do {
-            let rows: [Row] = try await client
-                .from("favorites")
-                .select("merchant_id")
-                .execute()
-                .value
-            ids = Set(rows.map(\.merchant_id))
-        } catch {
-            // Silent - probably signed out. Empty Set is the right state.
-            ids = []
-        }
+    var ids: Set<UUID> { Set(snapshots.map(\.id)) }
+    var sortedByRecent: [LocalFavorite] {
+        snapshots.sorted { ($0.saved_at) > ($1.saved_at) }
     }
 
     func isFavorite(_ merchantId: UUID) -> Bool { ids.contains(merchantId) }
 
-    func toggle(_ merchantId: UUID) async {
-        if ids.contains(merchantId) {
-            await remove(merchantId)
-        } else {
-            await add(merchantId)
+    func toggle(from merchant: MerchantNear) {
+        if isFavorite(merchant.id) { remove(merchant.id) }
+        else { add(LocalFavorite(from: merchant)) }
+    }
+
+    func toggle(from merchant: Merchant) {
+        if isFavorite(merchant.id) { remove(merchant.id) }
+        else { add(LocalFavorite(from: merchant)) }
+    }
+
+    func add(_ fav: LocalFavorite) {
+        if !ids.contains(fav.id) {
+            snapshots.append(fav)
+            save()
         }
     }
 
-    func add(_ merchantId: UUID) async {
-        struct Row: Encodable { let merchant_id: UUID }
-        ids.insert(merchantId) // optimistic
-        do {
-            try await client
-                .from("favorites")
-                .upsert(Row(merchant_id: merchantId), onConflict: "user_id,merchant_id")
-                .execute()
-        } catch {
-            ids.remove(merchantId) // rollback
-        }
+    func remove(_ merchantId: UUID) {
+        snapshots.removeAll { $0.id == merchantId }
+        save()
     }
 
-    func remove(_ merchantId: UUID) async {
-        ids.remove(merchantId)
-        do {
-            try await client
-                .from("favorites")
-                .delete()
-                .eq("merchant_id", value: merchantId.uuidString)
-                .execute()
-        } catch {
-            ids.insert(merchantId)
+    // MARK: - persistence
+
+    private func load() {
+        guard let data = UserDefaults.standard.data(forKey: storageKey),
+              let decoded = try? JSONDecoder().decode([LocalFavorite].self, from: data) else {
+            snapshots = []
+            return
         }
+        snapshots = decoded
     }
 
-    func list() async throws -> [FavoriteWithMerchant] {
-        let rows: [FavoriteWithMerchant] = try await client
-            .from("favorites")
-            .select("""
-                merchant_id, created_at,
-                merchants(slug, name, category, address, theme_color, theme_font, hero_image_path)
-            """)
-            .order("created_at", ascending: false)
-            .execute()
-            .value
-        return rows
+    private func save() {
+        guard let data = try? JSONEncoder().encode(snapshots) else { return }
+        UserDefaults.standard.set(data, forKey: storageKey)
+    }
+}
+
+/// One row in the local Saved list. Snapshotted at save-time so the list
+/// renders without a network call. Slug stays canonical for opening
+/// detail; if the merchant has renamed since, detail re-fetches.
+struct LocalFavorite: Codable, Identifiable, Hashable {
+    let id: UUID
+    let slug: String
+    let name: String
+    let category: String?
+    let address: String?
+    let theme_color: String?
+    let theme_font: String?
+    let saved_at: Date
+
+    init(from m: MerchantNear) {
+        self.id = m.id
+        self.slug = m.slug
+        self.name = m.name
+        self.category = m.category
+        self.address = m.address
+        self.theme_color = m.theme_color
+        self.theme_font = m.theme_font
+        self.saved_at = Date()
+    }
+
+    init(from m: Merchant) {
+        self.id = m.id
+        self.slug = m.slug
+        self.name = m.name
+        self.category = m.category
+        self.address = m.address
+        self.theme_color = m.theme_color
+        self.theme_font = m.theme_font
+        self.saved_at = Date()
     }
 }

@@ -10,15 +10,11 @@ struct MerchantDetailView: View {
     @EnvironmentObject var merchants: MerchantService
     @EnvironmentObject var rewards: RewardService
     @EnvironmentObject var favorites: FavoriteService
-    @EnvironmentObject var auth: AuthService
-    @EnvironmentObject var redemptions: RedemptionService
 
     @State private var merchant: Merchant?
     @State private var photos: [MerchantPhoto] = []
     @State private var liveRewards: [Reward] = []
     @State private var signals: [SustainabilitySignal] = []
-    @State private var showSignIn = false
-    @State private var presentedIssued: IssuedRedemption?
     @State private var error: String?
 
     private var theme: MerchantTheme.Resolved {
@@ -55,7 +51,7 @@ struct MerchantDetailView: View {
                     HStack(spacing: DesignTokens.Space.sm) {
                         Button {
                             Haptics.tap()
-                            Task { await favorites.toggle(m.id) }
+                            favorites.toggle(from: m)
                         } label: {
                             Image(systemName: favorites.isFavorite(m.id) ? "heart.fill" : "heart")
                                 .foregroundStyle(theme.foreground)
@@ -70,10 +66,6 @@ struct MerchantDetailView: View {
         }
         .task { await loadAll() }
         .refreshable { await loadAll() }
-        .sheet(isPresented: $showSignIn) { SignInView() }
-        .sheet(item: $presentedIssued) { issued in
-            IssueCodeView(issued: issued, theme: theme)
-        }
     }
 
     @ViewBuilder
@@ -141,14 +133,15 @@ struct MerchantDetailView: View {
     private var rewardsBlock: some View {
         if !liveRewards.isEmpty {
             VStack(alignment: .leading, spacing: DesignTokens.Space.md) {
-                Eyebrow(text: "Live rewards")
+                Eyebrow(text: "What they offer")
                 VStack(spacing: DesignTokens.Space.sm) {
                     ForEach(liveRewards) { r in
-                        RewardRow(reward: r, theme: theme) {
-                            Task { await issueCode(for: r) }
-                        }
+                        RewardRow(reward: r, theme: theme)
                     }
                 }
+                Text("Mention Locals at the counter.")
+                    .font(LocalsTheme.body(DesignTokens.Size.xs))
+                    .foregroundStyle(theme.muted)
             }
             .padding(.horizontal, DesignTokens.Space.lg)
         }
@@ -283,22 +276,6 @@ struct MerchantDetailView: View {
         }
     }
 
-    @MainActor
-    private func issueCode(for reward: Reward) async {
-        guard auth.currentUser != nil else {
-            showSignIn = true
-            return
-        }
-        Haptics.tap(.medium)
-        do {
-            let issued = try await redemptions.issue(rewardId: reward.id)
-            Haptics.success()
-            presentedIssued = issued
-        } catch {
-            Haptics.warn()
-            self.error = error.localsHumanMessage
-        }
-    }
 }
 
 // Simple horizontal flowing stack for the sustainability tags. Native iOS 17

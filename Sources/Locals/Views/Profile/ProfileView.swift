@@ -1,12 +1,15 @@
 import SwiftUI
 
+/// Customer-side "Me" tab. Anonymous by default - no signin wall, no
+/// account record on the server side. Sign-in is only ever triggered
+/// from "Add your business" (or by tapping into the Merchant tab from
+/// the dashboard). Everything else is local.
 struct ProfileView: View {
     @EnvironmentObject var auth: AuthService
     @EnvironmentObject var session: AppSession
     @EnvironmentObject var owners: OwnerMerchantService
 
     @State private var showSignIn = false
-    @State private var showRedemptions = false
     @State private var showSettings = false
     @State private var showFeedback = false
     @State private var showSignUpMerchant = false
@@ -16,8 +19,8 @@ struct ProfileView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: DesignTokens.Space.xxl) {
                     header
-                    yourBusinessBlock
-                    yoursBlock
+                    listBusinessBlock
+                    tilesBlock
                     if let email = auth.currentUser?.email {
                         signOutBlock(email: email)
                     }
@@ -28,7 +31,6 @@ struct ProfileView: View {
             .navigationTitle("Me")
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showSignIn) { SignInView() }
-            .sheet(isPresented: $showRedemptions) { MyRedemptionsView() }
             .sheet(isPresented: $showSettings) { SettingsView() }
             .sheet(isPresented: $showFeedback) { FeedbackSheet() }
             .sheet(isPresented: $showSignUpMerchant) { CreateMerchantView() }
@@ -37,50 +39,43 @@ struct ProfileView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Space.sm) {
-            if let email = auth.currentUser?.email {
-                Eyebrow(text: "Signed in as")
-                Text(email)
-                    .font(LocalsTheme.body(DesignTokens.Size.lg, weight: .medium))
-                    .foregroundStyle(LocalsTheme.fg)
-            } else {
-                Text("Sign in,\nuse rewards.")
-                    .font(LocalsTheme.display(DesignTokens.Size.h2, italic: true))
-                    .foregroundStyle(LocalsTheme.fg)
-                Button {
-                    showSignIn = true
-                } label: {
-                    Text("Sign in")
-                }
-                .buttonStyle(.localsPrimary)
-                .padding(.top, DesignTokens.Space.md)
-            }
+            Eyebrow(text: "Locals")
+            Text("Browse anonymously.\nList a business to sign in.")
+                .font(LocalsTheme.display(DesignTokens.Size.h2, italic: true))
+                .foregroundStyle(LocalsTheme.fg)
+            Text("We never ask for an account just to browse. No tracking, no ads, no inbox.")
+                .font(LocalsTheme.body(DesignTokens.Size.sm))
+                .foregroundStyle(LocalsTheme.fgMuted)
         }
     }
 
     @ViewBuilder
-    private var yourBusinessBlock: some View {
+    private var listBusinessBlock: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Space.sm) {
             Eyebrow(text: "Your business")
             if owners.hasAny {
                 ForEach(owners.owned) { o in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(o.merchants?.name ?? "Business")
-                                .font(LocalsTheme.body(DesignTokens.Size.base, weight: .medium))
-                            Text(o.merchants?.status ?? "")
-                                .font(LocalsTheme.body(DesignTokens.Size.xs))
+                    Button {
+                        session.activeTab = .merchant
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(o.merchants?.name ?? "Business")
+                                    .font(LocalsTheme.body(DesignTokens.Size.base, weight: .medium))
+                                    .foregroundStyle(LocalsTheme.fg)
+                                Text(o.merchants?.status ?? "")
+                                    .font(LocalsTheme.body(DesignTokens.Size.xs))
+                                    .foregroundStyle(LocalsTheme.fgMuted)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
                                 .foregroundStyle(LocalsTheme.fgMuted)
                         }
-                        Spacer()
-                        Button {
-                            session.activeTab = .merchant
-                        } label: {
-                            Image(systemName: "chevron.right")
-                        }
+                        .padding(DesignTokens.Space.md)
+                        .background(LocalsTheme.bgElevated)
+                        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous))
                     }
-                    .padding(DesignTokens.Space.md)
-                    .background(LocalsTheme.bgElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous))
+                    .buttonStyle(.plain)
                 }
             }
             Button {
@@ -101,43 +96,31 @@ struct ProfileView: View {
         }
     }
 
-    private var yoursBlock: some View {
+    private var tilesBlock: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Space.sm) {
-            Eyebrow(text: "Yours")
+            Eyebrow(text: "App")
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignTokens.Space.sm) {
                 ProfileTile(title: "Map", system: "map", action: { session.activeTab = .discover })
-                ProfileTile(title: "Codes", system: "qrcode", action: {
-                    if auth.currentUser == nil { showSignIn = true } else { showRedemptions = true }
-                })
                 ProfileTile(title: "Saved", system: "heart", action: { session.activeTab = .saved })
                 ProfileTile(title: "Settings", system: "slider.horizontal.3", action: { showSettings = true })
+                ProfileTile(title: "Feedback", system: "envelope", action: { showFeedback = true })
             }
-            Button {
-                showFeedback = true
-            } label: {
-                HStack {
-                    Image(systemName: "envelope")
-                    Text("Send feedback")
-                        .font(LocalsTheme.body(DesignTokens.Size.sm, weight: .medium))
-                }
-                .padding(DesignTokens.Space.md)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(LocalsTheme.bgElevated)
-                .foregroundStyle(LocalsTheme.fg)
-                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous))
-            }
-            .buttonStyle(.plain)
         }
     }
 
     private func signOutBlock(email: String) -> some View {
-        Button {
-            Task { await auth.signOut() }
-        } label: {
-            Text("Sign out")
-                .foregroundStyle(.red)
+        VStack(alignment: .leading, spacing: DesignTokens.Space.xs) {
+            Text("Signed in as \(email)")
+                .font(LocalsTheme.body(DesignTokens.Size.xs))
+                .foregroundStyle(LocalsTheme.fgMuted)
+            Button {
+                Task { await auth.signOut() }
+            } label: {
+                Text("Sign out")
+                    .foregroundStyle(.red)
+            }
+            .buttonStyle(.localsSecondary)
         }
-        .buttonStyle(.localsSecondary)
     }
 }
 
