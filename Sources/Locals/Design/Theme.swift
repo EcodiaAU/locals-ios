@@ -10,16 +10,16 @@ import SwiftUI
 
 enum LocalsTheme {
     // Chrome backgrounds + foreground
-    static let bg = DesignTokens.BG.default
+    static let bg = DesignTokens.BG.`default`
     static let bgElevated = DesignTokens.BG.elevated
     static let bgSubtle = DesignTokens.BG.subtle
-    static let fg = DesignTokens.FG.default
+    static let fg = DesignTokens.FG.`default`
     static let fgMuted = DesignTokens.FG.muted
     static let fgTrace = DesignTokens.FG.trace
     static let accent = DesignTokens.Brand.mustard
     static let accentDeep = DesignTokens.Brand.mustard_deep
     static let onAccent = DesignTokens.FG.onAccent
-    static let border = DesignTokens.Border.default
+    static let border = DesignTokens.Border.`default`
     static let borderSubtle = DesignTokens.Border.subtle
     static let ink = DesignTokens.Brand.ink
     static let cream = DesignTokens.Brand.cream
@@ -37,7 +37,7 @@ enum LocalsTheme {
     }
 
     static func body(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight, design: .default)
+        .system(size: size, weight: weight, design: .`default`)
     }
 
     static func mono(_ size: CGFloat, weight: Font.Weight = .medium) -> Font {

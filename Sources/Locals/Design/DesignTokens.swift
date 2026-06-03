@@ -25,7 +25,7 @@ public enum DesignTokens {
   }
 
   public enum BG {
-    public static let default = DesignTokens.dual(
+    public static let `default` = DesignTokens.dual(
       light: SwiftUI.Color(red: 0.9098, green: 0.8745, blue: 0.7882, opacity: 1.00),
       dark:  SwiftUI.Color(red: 0.1216, green: 0.0941, blue: 0.0627, opacity: 1.00)
     )
@@ -41,7 +41,7 @@ public enum DesignTokens {
   }
 
   public enum FG {
-    public static let default = DesignTokens.dual(
+    public static let `default` = DesignTokens.dual(
       light: SwiftUI.Color(red: 0.1216, green: 0.0941, blue: 0.0627, opacity: 1.00),
       dark:  SwiftUI.Color(red: 0.9098, green: 0.8745, blue: 0.7882, opacity: 1.00)
     )
@@ -61,7 +61,7 @@ public enum DesignTokens {
       light: SwiftUI.Color(red: 0.1216, green: 0.0941, blue: 0.0627, opacity: 0.10),
       dark:  SwiftUI.Color(red: 0.9098, green: 0.8745, blue: 0.7882, opacity: 0.10)
     )
-    public static let default = DesignTokens.dual(
+    public static let `default` = DesignTokens.dual(
       light: SwiftUI.Color(red: 0.1216, green: 0.0941, blue: 0.0627, opacity: 0.20),
       dark:  SwiftUI.Color(red: 0.9098, green: 0.8745, blue: 0.7882, opacity: 0.20)
     )

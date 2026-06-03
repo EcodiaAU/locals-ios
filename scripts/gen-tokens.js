@@ -22,7 +22,11 @@ function rgbaParse(s) {
   const [r, g, b, a] = m[1].split(',').map(s => parseFloat(s.trim()));
   return [r / 255, g / 255, b / 255, a == null ? 1 : a];
 }
+// Swift reserved words that need backticks when used as identifiers.
+const SWIFT_KEYWORDS = new Set(['default', 'class', 'struct', 'func', 'return', 'true', 'false', 'nil', 'self', 'super', 'let', 'var', 'if', 'else', 'for', 'while', 'in', 'as', 'is', 'where']);
+function id(name) { return SWIFT_KEYWORDS.has(name) ? '`' + name + '`' : name; }
 function emitColor(name, v) {
+  name = id(name);
   if (typeof v === 'string' && v.startsWith('#')) {
     const [r, g, b] = hexToRGB(v);
     return `    public static let ${name} = SwiftUI.Color(red: ${r.toFixed(4)}, green: ${g.toFixed(4)}, blue: ${b.toFixed(4)})`;
@@ -37,6 +41,7 @@ function emitColor(name, v) {
   return null;
 }
 function emitDual(name, light, dark) {
+  name = id(name);
   const rgbaParseOrHex = (s) => s.startsWith('#') ? [...hexToRGB(s), 1] : rgbaParse(s);
   const [lr, lg, lb, la] = rgbaParseOrHex(light);
   const [dr, dg, db, da] = rgbaParseOrHex(dark);
