@@ -1,0 +1,102 @@
+name: Locals
+options:
+  bundleIdPrefix: au.ecodia.locals
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: en
+  groupSortPosition: top
+  generateEmptyDirectories: true
+  createIntermediateGroups: true
+  defaultConfig: Release
+
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    DEVELOPMENT_TEAM: 86PUY7393S
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: NO
+    PRODUCT_NAME: Locals
+    ALWAYS_SEARCH_USER_PATHS: NO
+
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.20.0"
+  Nuke:
+    url: https://github.com/kean/Nuke
+    from: "12.8.0"
+
+targets:
+  Locals:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/Locals
+    resources:
+      - path: Sources/Locals/Resources
+        optional: true
+    info:
+      path: Sources/Locals/Info.plist
+      properties:
+        CFBundleDisplayName: Locals
+        CFBundleName: $(PRODUCT_NAME)
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundlePackageType: $(PRODUCT_BUNDLE_PACKAGE_TYPE)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSRequiresIPhoneOS: true
+        UILaunchScreen:
+          UIColorName: ""
+          UIImageName: ""
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSLocationWhenInUseUsageDescription: "Locals uses your location to show businesses near you and recognise when you visit one. We never share or sell your location."
+        NSCameraUsageDescription: "Locals uses the camera so staff can scan customer redemption codes at the counter."
+        NSPhotoLibraryUsageDescription: "Locals lets you choose photos from your library when listing or updating your business."
+        ITSAppUsesNonExemptEncryption: false
+        UIBackgroundModes:
+          - location
+        CFBundleURLTypes:
+          - CFBundleTypeRole: Editor
+            CFBundleURLName: au.ecodia.locals
+            CFBundleURLSchemes:
+              - locals
+        UIAppFonts:
+          - Spectral-Regular.ttf
+          - Spectral-Italic.ttf
+          - Spectral-SemiBold.ttf
+        LocalsSupabaseURL: https://dpumgcxpwfigtpotayjq.supabase.co
+        LocalsSupabaseAnonKey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwdW1nY3hwd2ZpZ3Rwb3RheWpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyOTEwODIsImV4cCI6MjA5NTg2NzA4Mn0.8FhySa1u2mb5z_3g1wFVwQFdgFqsWpZeKGy0gKItMP4
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: au.ecodia.locals
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ENABLE_BITCODE: NO
+        SUPPORTS_MACCATALYST: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        LD_RUNPATH_SEARCH_PATHS:
+          - $(inherited)
+          - "@executable_path/Frameworks"
+    dependencies:
+      - package: Supabase
+        product: Supabase
+      - package: Nuke
+        product: Nuke
+      - package: Nuke
+        product: NukeUI
+    entitlements:
+      path: Sources/Locals/Locals.entitlements
+      properties:
+        com.apple.developer.applesignin:
+          - Default
