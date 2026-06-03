@@ -1,0 +1,18 @@
+# Keep shell scripts and JS as LF so they run on macOS / Linux.
+*.sh text eol=lf
+*.js text eol=lf
+
+# Swift source can be CRLF on Windows checkout; Xcode is fine with either.
+*.swift text
+
+# Plist, yml, md - normalize to LF.
+*.yml text eol=lf
+*.plist text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+
+# Images are binary.
+*.png binary
+*.jpg binary
+*.ttf binary
+*.otf binary
