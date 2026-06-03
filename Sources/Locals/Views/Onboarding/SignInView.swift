@@ -6,7 +6,7 @@ import AuthenticationServices
 struct SignInView: View {
     @EnvironmentObject var auth: AuthService
     @Environment(\.dismiss) private var dismiss
-    @State private var nonce: (raw: String, hashed: String)?
+    @State private var nonce: (raw: String, sha256: String)?
     @State private var email: String = ""
     @State private var magicLinkSent: Bool = false
     @State private var error: String?
@@ -57,7 +57,7 @@ struct SignInView: View {
             let n = AuthService.makeNonce()
             nonce = n
             request.requestedScopes = [.email, .fullName]
-            request.nonce = n.hashed
+            request.nonce = n.sha256
         } onCompletion: { result in
             handleApple(result)
         }
