@@ -5,7 +5,7 @@ struct FeedbackSheet: View {
     @EnvironmentObject var auth: AuthService
     @Environment(\.dismiss) private var dismiss
 
-    @State private var body: String = ""
+    @State private var message: String = ""
     @State private var contact: String = ""
     @State private var sending = false
     @State private var sent = false
@@ -25,7 +25,7 @@ struct FeedbackSheet: View {
                         }
                     } else {
                         Eyebrow(text: "What's on your mind")
-                        TextEditor(text: $body)
+                        TextEditor(text: $message)
                             .scrollContentBackground(.hidden)
                             .padding(DesignTokens.Space.md)
                             .frame(minHeight: 180)
@@ -53,7 +53,7 @@ struct FeedbackSheet: View {
                             else { Text("Send") }
                         }
                         .buttonStyle(.localsPrimary)
-                        .disabled(sending || body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(sending || message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                 }
                 .padding(DesignTokens.Space.lg)
@@ -76,7 +76,7 @@ struct FeedbackSheet: View {
         do {
             try await feedback.send(
                 kind: "ios",
-                body: body,
+                body: message,
                 contact: contact.isEmpty ? auth.currentUser?.email : contact,
                 path: "ios.profile.feedback"
             )
