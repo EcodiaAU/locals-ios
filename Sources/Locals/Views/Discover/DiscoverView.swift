@@ -45,15 +45,19 @@ struct DiscoverView: View {
     var body: some View {
         NavigationStack {
             GeometryReader { geo in
-                // Tab-bar chrome height: 49pt UITabBar + bottom safe-area
-                // (home indicator). The sheet extends behind this chrome so
-                // the tab bar floats on top, but the sheet's CONTENT is
-                // padded above it so the grabber + header + list stay
-                // accessible at every detent.
-                let tabBarChrome: CGFloat = 49 + geo.safeAreaInsets.bottom
-                // Collapsed sheet must be tall enough that the grabber
-                // clears the tab bar's top edge by a comfortable margin.
-                let collapsedMinHeight = tabBarChrome + 56
+                // Tab-bar chrome (49pt UITabBar + 34pt bottom safe-area on
+                // modern iPhones). Hardcoded because geo.safeAreaInsets.bottom
+                // is 0 inside the TabView - TabView already consumes the
+                // safe area into its child inset, so the GeometryReader sees
+                // a zero bottom safe area. The sheet extends behind this
+                // chrome so the tab bar floats on top, but the sheet's
+                // CONTENT is padded above it so the grabber + header + list
+                // stay accessible at every detent.
+                let tabBarChrome: CGFloat = 83
+                // Collapsed floor: grabber sits ~80pt above the tab bar's
+                // top edge so the handle reads as clearly distinct from the
+                // tab bar and is fully grabbable.
+                let collapsedMinHeight = tabBarChrome + 80
                 let available = geo.size.height
                 let targetHeight = available * sheetFraction + tabBarChrome
                 let sheetHeight = max(collapsedMinHeight, targetHeight)
@@ -64,6 +68,11 @@ struct DiscoverView: View {
                         .overlay(alignment: .topTrailing) { topControls }
 
                     bottomSheet(bottomPadding: tabBarChrome)
+                        // The content inside .padding(.bottom, tabBarChrome)
+                        // already lifts the grabber + header + list above the
+                        // tab bar; the visible "useful" area of the collapsed
+                        // sheet is sheetHeight - tabBarChrome = 80pt, large
+                        // enough for the grabber strip plus a peek of header.
                         .frame(height: sheetHeight)
                         .frame(maxWidth: .infinity)
                         .background(LocalsTheme.bg)
