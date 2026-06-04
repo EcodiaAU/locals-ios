@@ -1,55 +1,104 @@
 #!/usr/bin/env python3
-"""Generate the 1024x1024 AppIcon PNG for Locals.
+"""
+Generate the Locals AppIcon at 1024x1024.
 
-Mustard ground with cream serif italic "L" - matches the locals-web
-editorial aesthetic (Spectral italic on warm cream). Run once; checked in
-to the asset catalog. Replace whenever brand changes.
+Mark: a small cluster of circles in cream + ink on a mustard ground.
+The cluster echoes the map-clustering mechanic (the count-circle that
+appears when several merchants overlap) and reads, at app-icon scale,
+as "people near you" without spelling it out.
+
+Composition:
+  - mustard #C49A3F background, full bleed, soft inner halo
+  - three circles in a triangular arrangement
+  - top circle = ink (the user / anchor)
+  - bottom-left + bottom-right = cream (the locals)
+  - sizes graduate so the eye reads the ink dot first
+  - circles tangent, not overlapping - keeps the silhouette clean
 """
 
-from PIL import Image, ImageDraw, ImageFont
+import math
 import os
+from PIL import Image, ImageDraw
 
-OUT = "D:/.code/locals-ios/Sources/Locals/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"
 SIZE = 1024
+OUT = os.path.join(
+    os.path.dirname(__file__),
+    "..",
+    "Sources",
+    "Locals",
+    "Resources",
+    "Assets.xcassets",
+    "AppIcon.appiconset",
+    "AppIcon-1024.png",
+)
 
-# Locals palette
-MUSTARD = (196, 154, 63)  # #C49A3F
-CREAM = (232, 223, 201)  # #E8DFC9
-INK = (31, 24, 16)  # #1F1810
+MUSTARD = (196, 154, 63, 255)  # #C49A3F
+MUSTARD_DEEP = (158, 121, 36, 255)  # #9E7924 - inner halo
+CREAM = (232, 223, 201, 255)  # #E8DFC9
+INK = (31, 24, 16, 255)  # #1F1810
 
-img = Image.new("RGB", (SIZE, SIZE), MUSTARD)
-draw = ImageDraw.Draw(img)
 
-# Find a serif italic font. macOS-installed Spectral if present, otherwise
-# Times New Roman Italic on Windows, otherwise PIL's bundled DejaVu Serif
-# Italic. The aesthetic target is one editorial italic "L" - close enough
-# matters more than exact face for an app icon.
-font_candidates = [
-    ("C:/Windows/Fonts/timesi.ttf", 820),
-    ("/Library/Fonts/Times New Roman Italic.ttf", 820),
-    ("C:/Windows/Fonts/georgiai.ttf", 820),
-    ("/System/Library/Fonts/Supplemental/Georgia Italic.ttf", 820),
-]
-font = None
-for path, size in font_candidates:
-    if os.path.exists(path):
-        font = ImageFont.truetype(path, size)
-        break
+def paste_circle(canvas, cx, cy, r, fill):
+    """Draw a circle anti-aliased onto canvas at (cx, cy) radius r."""
+    box = (cx - r, cy - r, cx + r, cy + r)
+    overlay = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    draw.ellipse(box, fill=fill)
+    canvas.alpha_composite(overlay)
 
-if font is None:
-    # PIL default - not pretty but renders without a system font.
-    font = ImageFont.load_default()
 
-text = "L"
-bbox = draw.textbbox((0, 0), text, font=font)
-w = bbox[2] - bbox[0]
-h = bbox[3] - bbox[1]
-# Center optically (raise the visual centre by 6% to compensate for italic
-# tilt + the serif tail that pulls the bbox down).
-x = (SIZE - w) // 2 - bbox[0]
-y = (SIZE - h) // 2 - bbox[1] - int(SIZE * 0.04)
-draw.text((x, y), text, fill=CREAM, font=font)
+def main():
+    img = Image.new("RGBA", (SIZE, SIZE), MUSTARD)
 
-os.makedirs(os.path.dirname(OUT), exist_ok=True)
-img.save(OUT, "PNG", optimize=True)
-print(f"wrote {OUT}  {os.path.getsize(OUT)} bytes")
+    # Soft deeper-mustard halo from the bottom so the canvas doesn't read
+    # as a flat swatch at icon sizes.
+    halo = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    halo_draw = ImageDraw.Draw(halo)
+    halo_draw.ellipse(
+        (-SIZE * 0.15, SIZE * 0.55, SIZE * 1.15, SIZE * 1.85),
+        fill=(MUSTARD_DEEP[0], MUSTARD_DEEP[1], MUSTARD_DEEP[2], 60),
+    )
+    img.alpha_composite(halo)
+
+    cx, cy = SIZE / 2, SIZE / 2
+    big_r = SIZE * 0.18
+    small_r = SIZE * 0.13
+
+    ink_cx = cx
+    ink_cy = cy - SIZE * 0.10
+
+    angle = math.radians(60)
+    gap = big_r + small_r + SIZE * 0.005
+    left_cx = ink_cx - gap * math.sin(angle)
+    left_cy = ink_cy + gap * math.cos(angle)
+    right_cx = ink_cx + gap * math.sin(angle)
+    right_cy = ink_cy + gap * math.cos(angle)
+
+    # Cream pair first (sits behind), then ink on top so the tangent
+    # points read crisp.
+    paste_circle(img, left_cx, left_cy, small_r, CREAM)
+    paste_circle(img, right_cx, right_cy, small_r, CREAM)
+
+    # Soft cast shadow beneath the ink anchor before painting the ink
+    # circle - sells the cluster as objects on a ground.
+    shadow = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(shadow)
+    sd.ellipse(
+        (
+            ink_cx - big_r * 0.9,
+            ink_cy + big_r * 0.55,
+            ink_cx + big_r * 0.9,
+            ink_cy + big_r * 0.85,
+        ),
+        fill=(0, 0, 0, 35),
+    )
+    img.alpha_composite(shadow)
+
+    paste_circle(img, ink_cx, ink_cy, big_r, INK)
+
+    img.convert("RGB").save(OUT, "PNG", optimize=True)
+    print(f"wrote {os.path.normpath(OUT)}  {os.path.getsize(OUT)} bytes")
+
+
+if __name__ == "__main__":
+    main()

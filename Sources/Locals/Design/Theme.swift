@@ -24,6 +24,12 @@ enum LocalsTheme {
     static let ink = DesignTokens.Brand.ink
     static let cream = DesignTokens.Brand.cream
 
+    // User-location pin: a desaturated denim that reads as "you are here"
+    // against the mustard merchant chrome without fighting it. iOS-blue-ish
+    // but warmer; sits the user dot in the same family as Apple's default
+    // while staying inside the locals palette.
+    static let userPin = Color(red: 0.235, green: 0.420, blue: 0.620)
+
     // The headline serif. Spectral is bundled (see Info.plist UIAppFonts).
     // If the font hasn't loaded yet, SwiftUI falls back to system serif.
     static func display(_ size: CGFloat, italic: Bool = true) -> Font {

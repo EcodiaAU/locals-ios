@@ -3,9 +3,9 @@ import MapKit
 import CoreLocation
 
 /// Discover - the customer surface. Edge-to-edge MapKit with native
-/// controls anchored inside the safe area, a proper iOS sheet (with
-/// real detents and a grabber that drags) for the merchant list, and
-/// distance-based clustering so a busy region reads as a few clean
+/// controls in the safe area, a custom in-ZStack draggable sheet that
+/// sits BELOW the tab bar (so the tab bar stays visible above it), and
+/// distance-based clustering so busy regions read as a few clean
 /// counts instead of a wall of overlapping pills.
 struct DiscoverView: View {
     @EnvironmentObject var session: AppSession
@@ -26,8 +26,13 @@ struct DiscoverView: View {
     @State private var visibleSpan: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0.4, longitudeDelta: 0.4)
     @State private var visibleCenter: CLLocationCoordinate2D = LocationManager.defaultCoordinate
     @State private var pushedSlug: String?
-    @State private var sheetDetent: PresentationDetent = .fraction(0.35)
     @State private var focusedMerchantId: UUID?
+
+    // Sheet height as a fraction of available vertical space.
+    @State private var sheetFraction: CGFloat = 0.4
+    @State private var dragAnchor: CGFloat = 0.4
+
+    private let detents: [CGFloat] = [0.12, 0.4, 0.9]
 
     var filtered: [MerchantNear] {
         guard let c = selectedCategory else { return nearby }
@@ -36,36 +41,48 @@ struct DiscoverView: View {
 
     var body: some View {
         NavigationStack {
-            map
-                .ignoresSafeArea()
-                .overlay(alignment: .topTrailing) { topControls }
-                .navigationDestination(isPresented: Binding(
-                    get: { pushedSlug != nil },
-                    set: { if !$0 { pushedSlug = nil } }
-                )) {
-                    if let slug = pushedSlug {
-                        MerchantDetailView(slug: slug)
-                    }
-                }
-                .toolbar(.hidden, for: .navigationBar)
-                .sheet(isPresented: .constant(true)) {
+            GeometryReader { geo in
+                let available = geo.size.height
+                let sheetHeight = max(96, available * sheetFraction)
+
+                ZStack(alignment: .bottom) {
+                    map
+                        .ignoresSafeArea()
+                        .overlay(alignment: .topTrailing) { topControls }
+
                     bottomSheet
-                        .presentationDetents(
-                            [.height(96), .fraction(0.35), .large],
-                            selection: $sheetDetent
+                        .frame(height: sheetHeight)
+                        .frame(maxWidth: .infinity)
+                        .background(LocalsTheme.bg)
+                        .clipShape(
+                            UnevenRoundedRectangle(
+                                topLeadingRadius: DesignTokens.Radius.xxl,
+                                bottomLeadingRadius: 0,
+                                bottomTrailingRadius: 0,
+                                topTrailingRadius: DesignTokens.Radius.xxl,
+                                style: .continuous
+                            )
                         )
-                        .presentationDragIndicator(.visible)
-                        .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.35)))
-                        .presentationCornerRadius(DesignTokens.Radius.xxl)
-                        .interactiveDismissDisabled(true)
+                        .shadow(color: .black.opacity(0.12), radius: 18, y: -6)
+                        .animation(.interactiveSpring(response: 0.32, dampingFraction: 0.85), value: sheetFraction)
                 }
-                .task { await reload() }
-                .onChange(of: location.coordinate.latitude) { _, _ in
-                    Task { await reload() }
+            }
+            .navigationDestination(isPresented: Binding(
+                get: { pushedSlug != nil },
+                set: { if !$0 { pushedSlug = nil } }
+            )) {
+                if let slug = pushedSlug {
+                    MerchantDetailView(slug: slug)
                 }
-                .onChange(of: session.pendingMerchantSlug) { _, slug in
-                    if let slug { pushedSlug = slug; session.pendingMerchantSlug = nil }
-                }
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            .task { await reload() }
+            .onChange(of: location.coordinate.latitude) { _, _ in
+                Task { await reload() }
+            }
+            .onChange(of: session.pendingMerchantSlug) { _, slug in
+                if let slug { pushedSlug = slug; session.pendingMerchantSlug = nil }
+            }
         }
     }
 
@@ -75,10 +92,6 @@ struct DiscoverView: View {
         Map(position: $cameraPosition, interactionModes: .all) {
             UserAnnotation()
 
-            // Clustered representation: one Annotation per cluster. A cluster
-            // of size 1 renders as a labelled pin, anything bigger as a
-            // count circle. The clustering radius scales with the visible
-            // span so zooming in unfolds groups naturally.
             ForEach(clusters, id: \.id) { cluster in
                 Annotation("", coordinate: cluster.coordinate) {
                     if cluster.merchants.count == 1, let m = cluster.merchants.first {
@@ -92,6 +105,7 @@ struct DiscoverView: View {
             }
         }
         .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
+        .tint(LocalsTheme.userPin)  // overrides the global mustard for the user dot
         .onMapCameraChange(frequency: .onEnd) { ctx in
             visibleSpan = ctx.region.span
             visibleCenter = ctx.region.center
@@ -115,7 +129,7 @@ struct DiscoverView: View {
             } label: {
                 Image(systemName: "location.fill")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(LocalsTheme.accent)
+                    .foregroundStyle(LocalsTheme.userPin)
                     .frame(width: 44, height: 44)
                     .background(.thinMaterial)
                     .clipShape(Circle())
@@ -130,14 +144,46 @@ struct DiscoverView: View {
 
     private var bottomSheet: some View {
         VStack(spacing: 0) {
+            grabberArea
             header
                 .padding(.horizontal, DesignTokens.Space.lg)
-                .padding(.top, DesignTokens.Space.sm)
                 .padding(.bottom, DesignTokens.Space.md)
             Divider().background(LocalsTheme.borderSubtle)
             list
         }
-        .background(LocalsTheme.bg)
+    }
+
+    /// Grabber sits inside its own padded zone so the touch target is
+    /// large + visually breathable. The whole strip is the drag handle.
+    private var grabberArea: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(LocalsTheme.borderSubtle)
+                .frame(width: 40, height: 5)
+                .padding(.vertical, DesignTokens.Space.md)
+        }
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+        .gesture(dragGesture)
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                // Drag up = larger sheet. Translation comes in points; convert
+                // to a delta over screen height (~800pt baseline) and apply.
+                let delta = -value.translation.height / 800
+                sheetFraction = max(0.05, min(0.95, dragAnchor + delta))
+            }
+            .onEnded { _ in
+                // Snap to the nearest detent.
+                let snapped = detents.min(by: { abs($0 - sheetFraction) < abs($1 - sheetFraction) }) ?? 0.4
+                withAnimation(.spring(response: 0.36, dampingFraction: 0.82)) {
+                    sheetFraction = snapped
+                }
+                dragAnchor = snapped
+                Haptics.tap(.light)
+            }
     }
 
     private var header: some View {
@@ -160,9 +206,6 @@ struct DiscoverView: View {
         return "All categories"
     }
 
-    /// Filter as a native Menu - one tap-target instead of a horizontal
-    /// pill row. SwiftUI renders this as a system popup on tap, with
-    /// checkmarks on the active row.
     private var categoryMenu: some View {
         Menu {
             Button {
@@ -221,12 +264,8 @@ struct DiscoverView: View {
 
     // MARK: - Clustering
 
-    /// Group merchants into clusters by screen-pixel distance. Two
-    /// merchants are in the same cluster when their map coordinates fall
-    /// within `clusterRadius` of each other at the current zoom level.
-    /// Greedy O(n^2) is fine at v1 sizes (<=200 merchants in view).
     private var clusters: [MerchantCluster] {
-        let radiusDeg = visibleSpan.latitudeDelta / 18  // tighter as you zoom in
+        let radiusDeg = visibleSpan.latitudeDelta / 18
         var groups: [MerchantCluster] = []
         for m in filtered {
             let coord = coordinate(for: m)
@@ -247,11 +286,6 @@ struct DiscoverView: View {
         return CLLocationCoordinate2D(latitude: lat, longitude: lng)
     }
 
-    /// Approximate a merchant coordinate from its distance + user's
-    /// location. The merchants_near RPC returns distance_m but not raw
-    /// lat/lng (the geo column is gated by RLS). We fan annotations out
-    /// around the user via a deterministic hash-based bearing - same id
-    /// always lands at the same point so the map is stable across reloads.
     private func coordinate(for m: MerchantNear) -> CLLocationCoordinate2D {
         let user = location.coordinate
         let metres = m.distance_m
@@ -277,14 +311,14 @@ struct DiscoverView: View {
                 center: target,
                 span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
             ))
-            sheetDetent = .height(96)
+            sheetFraction = 0.12
+            dragAnchor = 0.12
         }
     }
 
     private func tapPin(_ m: MerchantNear) {
         Haptics.tap()
         if focusedMerchantId == m.id {
-            // Second tap on the same pin opens detail.
             pushedSlug = m.slug
         } else {
             focusedMerchantId = m.id
