@@ -17,12 +17,12 @@ struct SignInView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: DesignTokens.Space.xxl) {
                     VStack(alignment: .leading, spacing: DesignTokens.Space.sm) {
-                        Eyebrow(text: "Sign in")
-                        Text("Save businesses,\nuse rewards.")
+                        Eyebrow(text: "List your business")
+                        Text("Sign in to\nmanage your listing.")
                             .font(LocalsTheme.display(DesignTokens.Size.h2, italic: true))
                             .foregroundStyle(LocalsTheme.fg)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text("Sign in to save favourites, redeem rewards at the counter, and list your business.")
+                        Text("Browsing Locals stays anonymous - no account needed. Sign in only if you're a business owner adding your spot.")
                             .font(LocalsTheme.body(DesignTokens.Size.base))
                             .foregroundStyle(LocalsTheme.fgMuted)
                     }
