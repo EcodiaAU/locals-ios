@@ -32,7 +32,10 @@ struct DiscoverView: View {
     @State private var sheetFraction: CGFloat = 0.4
     @State private var dragAnchor: CGFloat = 0.4
 
-    private let detents: [CGFloat] = [0.12, 0.4, 0.9]
+    // Detent fractions of the available height. The lowest is "as small
+    // as possible" - the collapsedMinHeight floor kicks in and the sheet
+    // bottoms out just above the tab bar with the grabber visible.
+    private let detents: [CGFloat] = [0.0, 0.4, 0.9]
 
     var filtered: [MerchantNear] {
         guard let c = selectedCategory else { return nearby }
@@ -42,15 +45,25 @@ struct DiscoverView: View {
     var body: some View {
         NavigationStack {
             GeometryReader { geo in
+                // Tab-bar chrome height: 49pt UITabBar + bottom safe-area
+                // (home indicator). The sheet extends behind this chrome so
+                // the tab bar floats on top, but the sheet's CONTENT is
+                // padded above it so the grabber + header + list stay
+                // accessible at every detent.
+                let tabBarChrome: CGFloat = 49 + geo.safeAreaInsets.bottom
+                // Collapsed sheet must be tall enough that the grabber
+                // clears the tab bar's top edge by a comfortable margin.
+                let collapsedMinHeight = tabBarChrome + 56
                 let available = geo.size.height
-                let sheetHeight = max(96, available * sheetFraction)
+                let targetHeight = available * sheetFraction + tabBarChrome
+                let sheetHeight = max(collapsedMinHeight, targetHeight)
 
                 ZStack(alignment: .bottom) {
                     map
                         .ignoresSafeArea()
                         .overlay(alignment: .topTrailing) { topControls }
 
-                    bottomSheet
+                    bottomSheet(bottomPadding: tabBarChrome)
                         .frame(height: sheetHeight)
                         .frame(maxWidth: .infinity)
                         .background(LocalsTheme.bg)
@@ -64,6 +77,7 @@ struct DiscoverView: View {
                             )
                         )
                         .shadow(color: .black.opacity(0.12), radius: 18, y: -6)
+                        .ignoresSafeArea(edges: .bottom)
                         .animation(.interactiveSpring(response: 0.32, dampingFraction: 0.85), value: sheetFraction)
                 }
             }
@@ -142,7 +156,7 @@ struct DiscoverView: View {
 
     // MARK: - Bottom sheet
 
-    private var bottomSheet: some View {
+    private func bottomSheet(bottomPadding: CGFloat) -> some View {
         VStack(spacing: 0) {
             grabberArea
             header
@@ -151,6 +165,10 @@ struct DiscoverView: View {
             Divider().background(LocalsTheme.borderSubtle)
             list
         }
+        // The sheet itself extends behind the tab bar; this padding keeps
+        // its content (grabber, header, list) above the tab bar so the tab
+        // bar can sit on top without covering anything important.
+        .padding(.bottom, bottomPadding)
     }
 
     /// Grabber sits inside its own padded zone so the touch target is
@@ -311,8 +329,8 @@ struct DiscoverView: View {
                 center: target,
                 span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
             ))
-            sheetFraction = 0.12
-            dragAnchor = 0.12
+            sheetFraction = 0.0
+            dragAnchor = 0.0
         }
     }
 
