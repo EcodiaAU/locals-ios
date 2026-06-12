@@ -15,7 +15,7 @@ settings:
     DEVELOPMENT_TEAM: 86PUY7393S
     CODE_SIGN_STYLE: Automatic
     MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "7"
+    CURRENT_PROJECT_VERSION: "8"
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     SWIFT_TREAT_WARNINGS_AS_ERRORS: NO
@@ -101,3 +101,17 @@ targets:
       properties:
         com.apple.developer.applesignin:
           - Default
+
+  LocalsTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/LocalsTests
+    dependencies:
+      - target: Locals
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: au.ecodia.local.tests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Locals.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Locals"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"

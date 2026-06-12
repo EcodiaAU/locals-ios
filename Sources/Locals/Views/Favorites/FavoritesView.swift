@@ -33,9 +33,12 @@ struct FavoritesView: View {
                     .scrollContentBackground(.hidden)
                 }
             }
-            .background(LocalsTheme.bg)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(LocalsTheme.bg.ignoresSafeArea())
             .navigationTitle("Saved")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(LocalsTheme.bg, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .navigationDestination(isPresented: Binding(
                 get: { pushedSlug != nil },
                 set: { if !$0 { pushedSlug = nil } }
@@ -54,6 +57,7 @@ struct FavoritesView: View {
                 .foregroundStyle(LocalsTheme.fgMuted)
         }
         .padding(DesignTokens.Space.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

@@ -44,21 +44,33 @@ struct OnboardingView: View {
                     .padding(.bottom, DesignTokens.Space.xl)
 
                 VStack(spacing: DesignTokens.Space.md) {
-                    Button {
-                        location.requestPermissionIfNeeded()
-                        session.hasOnboarded = true
-                    } label: {
-                        Text(page == slides.count - 1 ? "Get started" : "Skip")
-                    }
-                    .buttonStyle(.localsPrimary)
-
                     if page < slides.count - 1 {
+                        // Pre-final slides: Next is the primary (gold) call-to-action;
+                        // Skip is the secondary (outline) escape hatch. Previous order
+                        // had Skip as the primary which inverted user expectations.
                         Button {
                             withAnimation { page += 1 }
                         } label: {
                             Text("Next")
                         }
+                        .buttonStyle(.localsPrimary)
+
+                        Button {
+                            location.requestPermissionIfNeeded()
+                            session.hasOnboarded = true
+                        } label: {
+                            Text("Skip")
+                        }
                         .buttonStyle(.localsSecondary)
+                    } else {
+                        // Final slide: single CTA only.
+                        Button {
+                            location.requestPermissionIfNeeded()
+                            session.hasOnboarded = true
+                        } label: {
+                            Text("Get started")
+                        }
+                        .buttonStyle(.localsPrimary)
                     }
                 }
                 .padding(.horizontal, DesignTokens.Space.lg)
@@ -78,7 +90,7 @@ struct OnboardingView: View {
                 .fixedSize(horizontal: false, vertical: true)
             Text(slide.body)
                 .font(LocalsTheme.body(DesignTokens.Size.lg))
-                .foregroundStyle(LocalsTheme.fgMuted)
+                .foregroundStyle(LocalsTheme.fg.opacity(0.78))
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer()

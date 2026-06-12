@@ -28,66 +28,86 @@ struct DiscoverView: View {
     @State private var pushedSlug: String?
     @State private var focusedMerchantId: UUID?
 
-    // Sheet height as a fraction of available vertical space.
-    @State private var sheetFraction: CGFloat = 0.4
-    @State private var dragAnchor: CGFloat = 0.4
-
-    // Detent fractions of the available height. The lowest is "as small
-    // as possible" - the collapsedMinHeight floor kicks in and the sheet
-    // bottoms out just above the tab bar with the grabber visible.
-    private let detents: [CGFloat] = [0.0, 0.4, 0.9]
-
     var filtered: [MerchantNear] {
         guard let c = selectedCategory else { return nearby }
         return nearby.filter { $0.resolvedCategory == c }
     }
 
+    // Sheet height state for the custom in-ZStack bottom view. 0.0 collapses
+    // to the peek (chip rail + a few rows visible above the tab bar), 1.0
+    // expands to ~85% of the available screen. SwiftUI .sheet() was tried
+    // and rejected (2026-06-12 Tate: "the apple one is sitting infront of
+    // the bottom tab bar so i cant change tabs") because .sheet covers the
+    // TabView's tab pill on iOS 26. The custom sheet stays inside the tab
+    // content area, leaving the tab bar visible below at every detent.
+    @State private var sheetFraction: CGFloat = 0.0
+    @State private var dragAnchor: CGFloat = 0.0
+    private let detents: [CGFloat] = [0.0, 0.5, 0.85]
+
     var body: some View {
         NavigationStack {
-            GeometryReader { geo in
-                // Tab-bar chrome (49pt UITabBar + 34pt bottom safe-area on
-                // modern iPhones). Hardcoded because geo.safeAreaInsets.bottom
-                // is 0 inside the TabView - TabView already consumes the
-                // safe area into its child inset, so the GeometryReader sees
-                // a zero bottom safe area. The sheet extends behind this
-                // chrome so the tab bar floats on top, but the sheet's
-                // CONTENT is padded above it so the grabber + header + list
-                // stay accessible at every detent.
-                let tabBarChrome: CGFloat = 83
-                // Collapsed floor: grabber sits ~80pt above the tab bar's
-                // top edge so the handle reads as clearly distinct from the
-                // tab bar and is fully grabbable.
-                let collapsedMinHeight = tabBarChrome + 80
-                let available = geo.size.height
-                let targetHeight = available * sheetFraction + tabBarChrome
-                let sheetHeight = max(collapsedMinHeight, targetHeight)
+            ZStack(alignment: .bottom) {
+                map
+                    .ignoresSafeArea()
+                    .overlay(alignment: .topTrailing) { topControls }
 
-                ZStack(alignment: .bottom) {
-                    map
-                        .ignoresSafeArea()
-                        .overlay(alignment: .topTrailing) { topControls }
+                // GeometryReader does NOT ignoresSafeArea here, so
+                // geo.safeAreaInsets.bottom reports the REAL tab-bar +
+                // home-indicator inset. The sheet's material bleeds
+                // past that inset to the screen edge via .container
+                // ignoresSafeArea; the content above is padded UP by
+                // the real inset so chip rail + list clear the tab
+                // pill. Pattern lifted from glovebox-ios GBBottomSheet.
+                GeometryReader { geo in
+                    let bottomInset = geo.safeAreaInsets.bottom
+                    let bottomGap: CGFloat = DesignTokens.Space.sm
+                    let available = geo.size.height
+                    let peek: CGFloat = 168
+                    let mediumHeight = max(peek, available * 0.46)
+                    let expandedHeight = max(mediumHeight, available * 0.86)
+                    let targetHeight = height(for: sheetFraction, peek: peek, medium: mediumHeight, expanded: expandedHeight)
+                    let liveHeight = min(expandedHeight, max(peek, targetHeight - dragTranslation))
 
-                    bottomSheet(bottomPadding: tabBarChrome)
-                        // The content inside .padding(.bottom, tabBarChrome)
-                        // already lifts the grabber + header + list above the
-                        // tab bar; the visible "useful" area of the collapsed
-                        // sheet is sheetHeight - tabBarChrome = 80pt, large
-                        // enough for the grabber strip plus a peek of header.
-                        .frame(height: sheetHeight)
-                        .frame(maxWidth: .infinity)
-                        .background(LocalsTheme.bg)
-                        .clipShape(
-                            UnevenRoundedRectangle(
-                                topLeadingRadius: DesignTokens.Radius.xxl,
-                                bottomLeadingRadius: 0,
-                                bottomTrailingRadius: 0,
-                                topTrailingRadius: DesignTokens.Radius.xxl,
-                                style: .continuous
-                            )
+                    VStack(spacing: 0) {
+                        dragHandle
+                        chipRail
+                            .padding(.horizontal, DesignTokens.Space.lg)
+                            .padding(.bottom, DesignTokens.Space.sm)
+                        ScrollView {
+                            list
+                                .padding(.horizontal, DesignTokens.Space.lg)
+                                .padding(.bottom, DesignTokens.Space.lg)
+                        }
+                        .scrollBounceBehavior(.basedOnSize)
+                        .scrollDisabled(sheetFraction < 0.85)
+                    }
+                    .frame(height: liveHeight, alignment: .top)
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, bottomInset + bottomGap)
+                    .background(
+                        .regularMaterial,
+                        in: UnevenRoundedRectangle(
+                            topLeadingRadius: DesignTokens.Radius.xxl,
+                            bottomLeadingRadius: 0,
+                            bottomTrailingRadius: 0,
+                            topTrailingRadius: DesignTokens.Radius.xxl,
+                            style: .continuous
                         )
-                        .shadow(color: .black.opacity(0.12), radius: 18, y: -6)
-                        .ignoresSafeArea(edges: .bottom)
-                        .animation(.interactiveSpring(response: 0.32, dampingFraction: 0.85), value: sheetFraction)
+                    )
+                    .clipShape(
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: DesignTokens.Radius.xxl,
+                            bottomLeadingRadius: 0,
+                            bottomTrailingRadius: 0,
+                            topTrailingRadius: DesignTokens.Radius.xxl,
+                            style: .continuous
+                        )
+                    )
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+                    .ignoresSafeArea(.container, edges: .bottom)
+                    .animation(.spring(response: 0.34, dampingFraction: 0.82), value: sheetFraction)
+                    .animation(.spring(response: 0.34, dampingFraction: 0.82), value: liveHeight)
+                    .gesture(dragGesture(peek: peek, medium: mediumHeight, expanded: expandedHeight))
                 }
             }
             .navigationDestination(isPresented: Binding(
@@ -107,6 +127,46 @@ struct DiscoverView: View {
                 if let slug { pushedSlug = slug; session.pendingMerchantSlug = nil }
             }
         }
+    }
+
+    @GestureState private var dragTranslation: CGFloat = 0
+
+    private var dragHandle: some View {
+        Capsule()
+            .fill(Color.gray.opacity(0.35))
+            .frame(width: 40, height: 5)
+            .padding(.vertical, DesignTokens.Space.sm)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+    }
+
+    private func height(for fraction: CGFloat, peek: CGFloat, medium: CGFloat, expanded: CGFloat) -> CGFloat {
+        if fraction < 0.25 { return peek }
+        if fraction < 0.7 { return medium }
+        return expanded
+    }
+
+    private func dragGesture(peek: CGFloat, medium: CGFloat, expanded: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 4)
+            .updating($dragTranslation) { value, state, _ in
+                state = value.translation.height
+            }
+            .onEnded { value in
+                let current = height(for: sheetFraction, peek: peek, medium: medium, expanded: expanded)
+                let velocity = value.predictedEndTranslation.height - value.translation.height
+                let projected = current - value.translation.height - velocity * 0.18
+                let candidates: [(CGFloat, CGFloat)] = [
+                    (0.0, peek),
+                    (0.5, medium),
+                    (0.95, expanded)
+                ]
+                let nearest = candidates.min(by: { abs($0.1 - projected) < abs($1.1 - projected) })?.0 ?? 0.0
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
+                    sheetFraction = nearest
+                }
+                dragAnchor = nearest
+                Haptics.tap(.light)
+            }
     }
 
     // MARK: - Map
@@ -163,117 +223,58 @@ struct DiscoverView: View {
         .padding(.top, DesignTokens.Space.sm)
     }
 
-    // MARK: - Bottom sheet
+    // MARK: - Sheet content (chip rail + list)
 
-    private func bottomSheet(bottomPadding: CGFloat) -> some View {
-        VStack(spacing: 0) {
-            grabberArea
-            header
-                .padding(.horizontal, DesignTokens.Space.lg)
-                .padding(.bottom, DesignTokens.Space.md)
-            Divider().background(LocalsTheme.borderSubtle)
-            list
-        }
-        // The sheet itself extends behind the tab bar; this padding keeps
-        // its content (grabber, header, list) above the tab bar so the tab
-        // bar can sit on top without covering anything important.
-        .padding(.bottom, bottomPadding)
-    }
-
-    /// Grabber sits inside its own padded zone so the touch target is
-    /// large + visually breathable. The whole strip is the drag handle.
-    private var grabberArea: some View {
-        VStack(spacing: 0) {
-            Capsule()
-                .fill(LocalsTheme.borderSubtle)
-                .frame(width: 40, height: 5)
-                .padding(.vertical, DesignTokens.Space.md)
-        }
-        .frame(maxWidth: .infinity)
-        .contentShape(Rectangle())
-        .gesture(dragGesture)
-    }
-
-    private var dragGesture: some Gesture {
-        DragGesture()
-            .onChanged { value in
-                // Drag up = larger sheet. Translation comes in points; convert
-                // to a delta over screen height (~800pt baseline) and apply.
-                let delta = -value.translation.height / 800
-                sheetFraction = max(0.05, min(0.95, dragAnchor + delta))
-            }
-            .onEnded { _ in
-                // Snap to the nearest detent.
-                let snapped = detents.min(by: { abs($0 - sheetFraction) < abs($1 - sheetFraction) }) ?? 0.4
-                withAnimation(.spring(response: 0.36, dampingFraction: 0.82)) {
-                    sheetFraction = snapped
-                }
-                dragAnchor = snapped
-                Haptics.tap(.light)
-            }
-    }
-
-    private var header: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(filtered.isEmpty ? "Nothing here" : "\(filtered.count) nearby")
-                    .font(LocalsTheme.body(DesignTokens.Size.base, weight: .semibold))
-                    .foregroundStyle(LocalsTheme.fg)
-                Text(categorySubtitle)
-                    .font(LocalsTheme.body(DesignTokens.Size.xs))
-                    .foregroundStyle(LocalsTheme.fgMuted)
-            }
-            Spacer()
-            categoryMenu
-        }
-    }
-
-    private var categorySubtitle: String {
-        if let c = selectedCategory { return "Showing \(c.label.lowercased())" }
-        return "All categories"
-    }
-
-    private var categoryMenu: some View {
-        Menu {
-            Button {
-                selectedCategory = nil
-            } label: {
-                Label("All", systemImage: selectedCategory == nil ? "checkmark" : "")
-            }
-            ForEach(MerchantCategory.allCases.filter { $0 != .other }) { cat in
-                Button {
-                    selectedCategory = cat
-                } label: {
-                    Label(cat.label, systemImage: selectedCategory == cat ? "checkmark" : "")
+    // Horizontal scrolling chip rail — All + each merchant category.
+    // Mirrors locals-android `CategoryRail` 1:1: single primary control,
+    // selected chip in ink, unselected in soft gray. Replaces the older
+    // header + Filter dropdown which Tate flagged as visually busy.
+    private var chipRail: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DesignTokens.Space.sm) {
+                chip("All", active: selectedCategory == nil) { selectedCategory = nil }
+                ForEach(MerchantCategory.allCases.filter { $0 != .other }) { cat in
+                    chip(cat.label, active: selectedCategory == cat) { selectedCategory = cat }
                 }
             }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "line.3.horizontal.decrease")
-                Text(selectedCategory?.label ?? "Filter")
-            }
-            .font(LocalsTheme.body(DesignTokens.Size.sm, weight: .medium))
-            .padding(.horizontal, DesignTokens.Space.md)
-            .padding(.vertical, DesignTokens.Space.xs)
-            .background(LocalsTheme.bgElevated)
-            .foregroundStyle(LocalsTheme.fg)
-            .clipShape(Capsule())
         }
+    }
+
+    @ViewBuilder
+    private func chip(_ label: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: { Haptics.tap(.light); action() }) {
+            Text(label)
+                .font(LocalsTheme.body(DesignTokens.Size.sm, weight: .medium))
+                .padding(.horizontal, DesignTokens.Space.md)
+                .padding(.vertical, DesignTokens.Space.xs)
+                .background(active ? LocalsTheme.fg : Color(red: 0.95, green: 0.95, blue: 0.95))
+                .foregroundStyle(active ? LocalsTheme.bg : LocalsTheme.fg)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private var list: some View {
         Group {
             if loading && nearby.isEmpty {
-                ProgressView().padding(DesignTokens.Space.xl)
+                HStack { ProgressView(); Spacer() }
             } else if filtered.isEmpty {
-                VStack(spacing: DesignTokens.Space.sm) {
-                    Text("No businesses in this category")
-                        .font(LocalsTheme.serif(DesignTokens.Size.lg, italic: true))
-                    Text("Try All, or scroll the map.")
+                // Left-aligned, plain sans empty state — matches Android's
+                // EmptyListBlock. The old centered serif-italic version read
+                // as "wack" / over-designed for a simple bottom sheet.
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(selectedCategory == nil
+                         ? "No merchants here yet"
+                         : "No merchants in this category here")
+                        .font(LocalsTheme.body(DesignTokens.Size.base, weight: .semibold))
+                        .foregroundStyle(LocalsTheme.fg)
+                    Text(selectedCategory == nil
+                         ? "Locals starts on the Sunshine Coast. We will be in more places soon."
+                         : "Try All, or move the map.")
                         .font(LocalsTheme.body(DesignTokens.Size.sm))
                         .foregroundStyle(LocalsTheme.fgMuted)
                 }
-                .padding(DesignTokens.Space.xl)
+                .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -338,8 +339,6 @@ struct DiscoverView: View {
                 center: target,
                 span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
             ))
-            sheetFraction = 0.0
-            dragAnchor = 0.0
         }
     }
 

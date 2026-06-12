@@ -9,20 +9,26 @@ import SwiftUI
 // rules and renders in the merchant's chosen theme_color + theme_font.
 
 enum LocalsTheme {
-    // Chrome backgrounds + foreground
-    static let bg = DesignTokens.BG.`default`
-    static let bgElevated = DesignTokens.BG.elevated
-    static let bgSubtle = DesignTokens.BG.subtle
+    // Chrome backgrounds + foreground.
+    // 2026-06-12: de-mustard pass. Tate verbatim: "the mustard is actually
+    // everywhere across the app and i hate it... use the nice warm off white
+    // that you've made the bottom modals." The brand cream (#E8DFC9) and
+    // mustard (#C49A3F) survive as ICON + MERCHANT-THEME paints only; chrome
+    // pages render in warm off-white. Accents resolve to ink, not mustard.
+    static let bg = Color(red: 0.980, green: 0.976, blue: 0.961)         // #FAF9F5 warm off-white
+    static let bgElevated = Color(red: 1.0, green: 1.0, blue: 1.0)        // #FFFFFF
+    static let bgSubtle = Color(red: 0.949, green: 0.945, blue: 0.929)    // #F2F1ED
     static let fg = DesignTokens.FG.`default`
     static let fgMuted = DesignTokens.FG.muted
     static let fgTrace = DesignTokens.FG.trace
-    static let accent = DesignTokens.Brand.mustard
-    static let accentDeep = DesignTokens.Brand.mustard_deep
-    static let onAccent = DesignTokens.FG.onAccent
+    static let accent = DesignTokens.Brand.ink                            // was mustard — ink reads as the action paint on white
+    static let accentDeep = DesignTokens.Brand.ink
+    static let onAccent = Color(red: 0.980, green: 0.976, blue: 0.961)    // off-white on ink
     static let border = DesignTokens.Border.`default`
     static let borderSubtle = DesignTokens.Border.subtle
     static let ink = DesignTokens.Brand.ink
     static let cream = DesignTokens.Brand.cream
+    static let mustard = DesignTokens.Brand.mustard                       // kept for icon + merchant-theme usage
 
     // User-location pin: a desaturated denim that reads as "you are here"
     // against the mustard merchant chrome without fighting it. iOS-blue-ish
@@ -70,6 +76,17 @@ struct LocalsPrimaryButtonStyle: ButtonStyle {
     var fill: Color = LocalsTheme.accent
     var foreground: Color = LocalsTheme.onAccent
     func makeBody(configuration: Configuration) -> some View {
+        LocalsPrimaryButtonBody(configuration: configuration, fill: fill, foreground: foreground)
+    }
+}
+
+private struct LocalsPrimaryButtonBody: View {
+    let configuration: ButtonStyle.Configuration
+    let fill: Color
+    let foreground: Color
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
         configuration.label
             .font(LocalsTheme.body(DesignTokens.Size.base, weight: .semibold))
             .frame(maxWidth: .infinity, minHeight: 52)
@@ -77,6 +94,7 @@ struct LocalsPrimaryButtonStyle: ButtonStyle {
             .background(fill)
             .foregroundStyle(foreground)
             .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous))
+            .opacity(isEnabled ? 1 : 0.38)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
             .animation(.easeOut(duration: DesignTokens.Motion.fast), value: configuration.isPressed)
             .sensoryFeedback(.impact(weight: .medium), trigger: configuration.isPressed) { _, n in n }

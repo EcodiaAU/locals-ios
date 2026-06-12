@@ -16,6 +16,11 @@ struct RootView: View {
         .animation(.easeInOut(duration: DesignTokens.Motion.base), value: session.hasOnboarded)
     }
 
+    // Default iOS 26 TabView, native floating pill, no appearance overrides.
+    // Matches glovebox-ios RootView pattern (2026-06-12). The Discover sheet
+    // reads geo.safeAreaInsets.bottom to know how high the pill sits and
+    // pads its content above it; the sheet's material bleeds past the pill
+    // to the screen edge via .ignoresSafeArea(.container, edges: .bottom).
     private var tabs: some View {
         TabView(selection: $session.activeTab) {
             DiscoverView()
@@ -36,7 +41,6 @@ struct RootView: View {
                     .tag(RootTab.merchant)
             }
         }
-        .toolbarBackground(LocalsTheme.bg, for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
+        .tint(LocalsTheme.ink)
     }
 }

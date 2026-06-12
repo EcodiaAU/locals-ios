@@ -94,16 +94,26 @@ struct SignInView: View {
                 Text("Or send a magic link")
                     .font(LocalsTheme.body(DesignTokens.Size.base, weight: .medium))
                     .foregroundStyle(LocalsTheme.fg)
-                TextField("you@somewhere.com", text: $email)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .padding(.horizontal, DesignTokens.Space.lg)
-                    .frame(height: 52)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous)
-                            .strokeBorder(LocalsTheme.border)
-                    )
+                ZStack(alignment: .leading) {
+                    if email.isEmpty {
+                        Text("you@somewhere.com")
+                            .font(LocalsTheme.body(DesignTokens.Size.base))
+                            .foregroundStyle(LocalsTheme.fgMuted)
+                            .padding(.horizontal, DesignTokens.Space.lg)
+                    }
+                    TextField("", text: $email)
+                        .foregroundStyle(LocalsTheme.fg)
+                        .tint(LocalsTheme.fg)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .padding(.horizontal, DesignTokens.Space.lg)
+                }
+                .frame(height: 52)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.lg, style: .continuous)
+                        .strokeBorder(LocalsTheme.border)
+                )
                 Button {
                     Task { await sendMagic() }
                 } label: {
