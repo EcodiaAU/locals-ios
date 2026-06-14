@@ -41,6 +41,6 @@ struct RootView: View {
                     .tag(RootTab.merchant)
             }
         }
-        .tint(LocalsTheme.ink)
+        .tint(LocalsTheme.fg)  // auto-flips: ink in light, cream in dark — selected-tab tint stays visible in both
     }
 }

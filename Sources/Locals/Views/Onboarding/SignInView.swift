@@ -6,6 +6,7 @@ import AuthenticationServices
 struct SignInView: View {
     @EnvironmentObject var auth: AuthService
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var nonce: (raw: String, sha256: String)?
     @State private var email: String = ""
     @State private var magicLinkSent: Bool = false
@@ -61,7 +62,7 @@ struct SignInView: View {
         } onCompletion: { result in
             handleApple(result)
         }
-        .signInWithAppleButtonStyle(.black)
+        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
         .frame(maxWidth: .infinity, minHeight: 52)
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.xl, style: .continuous))
     }

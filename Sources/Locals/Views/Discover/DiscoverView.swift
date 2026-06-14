@@ -247,7 +247,7 @@ struct DiscoverView: View {
                 .font(LocalsTheme.body(DesignTokens.Size.sm, weight: .medium))
                 .padding(.horizontal, DesignTokens.Space.md)
                 .padding(.vertical, DesignTokens.Space.xs)
-                .background(active ? LocalsTheme.fg : Color(red: 0.95, green: 0.95, blue: 0.95))
+                .background(active ? LocalsTheme.fg : LocalsTheme.bgSubtle)
                 .foregroundStyle(active ? LocalsTheme.bg : LocalsTheme.fg)
                 .clipShape(Capsule())
         }

@@ -15,15 +15,39 @@ enum LocalsTheme {
     // that you've made the bottom modals." The brand cream (#E8DFC9) and
     // mustard (#C49A3F) survive as ICON + MERCHANT-THEME paints only; chrome
     // pages render in warm off-white. Accents resolve to ink, not mustard.
-    static let bg = Color(red: 0.980, green: 0.976, blue: 0.961)         // #FAF9F5 warm off-white
-    static let bgElevated = Color(red: 1.0, green: 1.0, blue: 1.0)        // #FFFFFF
-    static let bgSubtle = Color(red: 0.949, green: 0.945, blue: 0.929)    // #F2F1ED
+    //
+    // 2026-06-14: dark mode wired. Every chrome paint now resolves through
+    // DesignTokens.dual() so light <-> dark flips with userInterfaceStyle.
+    // Light is warm off-white + ink (unchanged). Dark inverts: ink ground +
+    // cream foreground, accent flips to cream (the action paint that reads
+    // on ink the way ink reads on off-white). Mustard is never the chrome.
+    static let bg = DesignTokens.dual(
+        light: Color(red: 0.980, green: 0.976, blue: 0.961),   // #FAF9F5 warm off-white
+        dark:  Color(red: 0.122, green: 0.094, blue: 0.063)    // #1F1810 ink ground
+    )
+    static let bgElevated = DesignTokens.dual(
+        light: Color(red: 1.000, green: 1.000, blue: 1.000),   // #FFFFFF
+        dark:  Color(red: 0.165, green: 0.133, blue: 0.094)    // #2A2218 ink + lift
+    )
+    static let bgSubtle = DesignTokens.dual(
+        light: Color(red: 0.949, green: 0.945, blue: 0.929),   // #F2F1ED
+        dark:  Color(red: 0.200, green: 0.165, blue: 0.122)    // #332A1F ink + more lift
+    )
     static let fg = DesignTokens.FG.`default`
     static let fgMuted = DesignTokens.FG.muted
     static let fgTrace = DesignTokens.FG.trace
-    static let accent = DesignTokens.Brand.ink                            // was mustard — ink reads as the action paint on white
-    static let accentDeep = DesignTokens.Brand.ink
-    static let onAccent = Color(red: 0.980, green: 0.976, blue: 0.961)    // off-white on ink
+    static let accent = DesignTokens.dual(
+        light: DesignTokens.Brand.ink,                          // ink on off-white
+        dark:  DesignTokens.Brand.cream                         // cream on ink (the action paint inverts)
+    )
+    static let accentDeep = DesignTokens.dual(
+        light: DesignTokens.Brand.ink,
+        dark:  DesignTokens.Brand.cream
+    )
+    static let onAccent = DesignTokens.dual(
+        light: Color(red: 0.980, green: 0.976, blue: 0.961),   // off-white text on ink button
+        dark:  Color(red: 0.122, green: 0.094, blue: 0.063)    // ink text on cream button
+    )
     static let border = DesignTokens.Border.`default`
     static let borderSubtle = DesignTokens.Border.subtle
     static let ink = DesignTokens.Brand.ink
@@ -33,8 +57,12 @@ enum LocalsTheme {
     // User-location pin: a desaturated denim that reads as "you are here"
     // against the mustard merchant chrome without fighting it. iOS-blue-ish
     // but warmer; sits the user dot in the same family as Apple's default
-    // while staying inside the locals palette.
-    static let userPin = Color(red: 0.235, green: 0.420, blue: 0.620)
+    // while staying inside the locals palette. Brightened on dark so it
+    // doesn't sink into the ink ground.
+    static let userPin = DesignTokens.dual(
+        light: Color(red: 0.235, green: 0.420, blue: 0.620),
+        dark:  Color(red: 0.420, green: 0.620, blue: 0.820)
+    )
 
     // The headline serif. Spectral is bundled (see Info.plist UIAppFonts).
     // If the font hasn't loaded yet, SwiftUI falls back to system serif.
