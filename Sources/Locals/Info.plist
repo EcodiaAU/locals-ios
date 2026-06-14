@@ -26,7 +26,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>au.ecodia.locals</string>
+			<string>au.ecodia.local</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>locals</string>
