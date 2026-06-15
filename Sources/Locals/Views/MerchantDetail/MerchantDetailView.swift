@@ -10,12 +10,15 @@ struct MerchantDetailView: View {
     @EnvironmentObject var merchants: MerchantService
     @EnvironmentObject var rewards: RewardService
     @EnvironmentObject var favorites: FavoriteService
+    @EnvironmentObject var auth: AuthService
 
     @State private var merchant: Merchant?
     @State private var photos: [MerchantPhoto] = []
     @State private var liveRewards: [Reward] = []
     @State private var signals: [SustainabilitySignal] = []
     @State private var error: String?
+    @State private var showSignIn = false
+    @State private var showCreateMerchant = false
 
     private var theme: MerchantTheme.Resolved {
         MerchantTheme.resolve(color: merchant?.theme_color, font: merchant?.theme_font)
@@ -66,6 +69,8 @@ struct MerchantDetailView: View {
         }
         .task { await loadAll() }
         .refreshable { await loadAll() }
+        .sheet(isPresented: $showSignIn) { SignInView() }
+        .sheet(isPresented: $showCreateMerchant) { CreateMerchantView() }
     }
 
     @ViewBuilder
@@ -74,7 +79,7 @@ struct MerchantDetailView: View {
             VStack(alignment: .leading, spacing: DesignTokens.Space.lg) {
                 Eyebrow(text: m.resolvedCategory.label)
                 Text(m.name)
-                    .font(theme.titleFont(DesignTokens.Size.hero))
+                    .font(theme.titleFont(DesignTokens.Size.h1))
                     .foregroundStyle(theme.foreground)
                     .lineSpacing(-4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -236,13 +241,24 @@ struct MerchantDetailView: View {
     }
 
     private var footer: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: DesignTokens.Space.md) {
             Text("Locals")
                 .font(LocalsTheme.serif(DesignTokens.Size.sm, italic: true))
                 .foregroundStyle(theme.muted)
-            Text("Want to add yours? · locals.ecodia.au")
-                .font(LocalsTheme.body(DesignTokens.Size.xs))
-                .foregroundStyle(theme.muted)
+            Button {
+                Haptics.tap()
+                if auth.currentUser == nil { showSignIn = true } else { showCreateMerchant = true }
+            } label: {
+                Text("Want to add yours?")
+                    .font(LocalsTheme.body(DesignTokens.Size.xs, weight: .medium))
+                    .foregroundStyle(theme.foreground)
+                    .padding(.horizontal, DesignTokens.Space.lg)
+                    .padding(.vertical, DesignTokens.Space.sm)
+                    .overlay(
+                        Capsule().stroke(theme.foreground.opacity(0.25), lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, DesignTokens.Space.huge)
