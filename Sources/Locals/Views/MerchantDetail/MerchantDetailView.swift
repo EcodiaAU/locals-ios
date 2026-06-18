@@ -59,10 +59,12 @@ struct MerchantDetailView: View {
                             Image(systemName: favorites.isFavorite(m.id) ? "heart.fill" : "heart")
                                 .foregroundStyle(theme.foreground)
                         }
+                        .accessibilityLabel(favorites.isFavorite(m.id) ? "Remove from saved" : "Save business")
                         ShareLink(item: URL(string: "https://locals.ecodia.au/\(m.slug)") ?? URL(string: "https://locals.ecodia.au")!) {
                             Image(systemName: "square.and.arrow.up")
                                 .foregroundStyle(theme.foreground)
                         }
+                        .accessibilityLabel("Share business")
                     }
                 }
             }

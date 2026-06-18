@@ -42,7 +42,6 @@ struct DiscoverView: View {
     // content area, leaving the tab bar visible below at every detent.
     @State private var sheetFraction: CGFloat = 0.0
     @State private var dragAnchor: CGFloat = 0.0
-    private let detents: [CGFloat] = [0.0, 0.5, 0.85]
 
     var body: some View {
         NavigationStack {
@@ -223,6 +222,7 @@ struct DiscoverView: View {
                     .clipShape(Circle())
                     .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
             }
+            .accessibilityLabel("Centre map on my location")
         }
         .padding(.horizontal, DesignTokens.Space.md)
         .padding(.top, DesignTokens.Space.sm)
@@ -281,14 +281,18 @@ struct DiscoverView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(filtered) { m in
-                            NearbyRow(merchant: m, focused: focusedMerchantId == m.id) {
-                                tapRow(m)
-                            }
-                            Divider().background(LocalsTheme.borderSubtle)
+                // No inner ScrollView: the body already wraps `list` in one
+                // (gated by .scrollDisabled(sheetFraction < 0.85)). A nested
+                // vertical ScrollView here stole the drag gesture and let the
+                // list scroll at the peek/medium detents, defeating the
+                // drag-to-expand-then-scroll contract. Plain LazyVStack lets
+                // the single outer ScrollView own both the drag and the scroll.
+                LazyVStack(spacing: 0) {
+                    ForEach(filtered) { m in
+                        NearbyRow(merchant: m, focused: focusedMerchantId == m.id) {
+                            tapRow(m)
                         }
+                        Divider().background(LocalsTheme.borderSubtle)
                     }
                 }
             }
@@ -335,16 +339,15 @@ struct DiscoverView: View {
 
     // MARK: - Interactions
 
+    // A list row opens the merchant directly - parity with locals-android
+    // (DiscoverScreen MerchantCard onClick -> onMerchant(slug)) and the
+    // universal expectation for a list of places. The previous behaviour
+    // only panned the map, leaving the user to hunt the pin and double-tap
+    // it to actually open the page, which read as a dead tap.
     private func tapRow(_ m: MerchantNear) {
         Haptics.tap()
         focusedMerchantId = m.id
-        let target = coordinate(for: m)
-        withAnimation(.easeInOut(duration: 0.35)) {
-            cameraPosition = .region(MKCoordinateRegion(
-                center: target,
-                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-            ))
-        }
+        pushedSlug = m.slug
     }
 
     private func tapPin(_ m: MerchantNear) {
