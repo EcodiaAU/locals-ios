@@ -63,26 +63,32 @@ enum MerchantTheme {
         DesignTokens.Brand.mustard
     }
 
-    // Six fonts allowed per migration 0006. Spectral is bundled; the others
-    // gracefully degrade to system serif / system sans if the family is not
-    // available on the device. iOS 17 ships SF Pro everywhere - the rest are
-    // system fallbacks weighted to feel intentional.
+    // Six fonts allowed per migration 0006, all now bundled as real families
+    // (parity with locals-web, which loads the same six from Google Fonts).
+    // Before this, only Spectral was bundled and eb-garamond/cardo/cormorant
+    // all collapsed to one system serif italic while work-sans/inter both
+    // collapsed to system sans, so the theme picker advertised distinct fonts
+    // it could not render. The headline renders in the italic cut of each
+    // serif to hold the editorial register; the two sans render upright
+    // semibold. Referenced by PostScript name so the variable fonts
+    // (EB Garamond, Cormorant, Work Sans, Inter) resolve to their default
+    // instance; the .weight() axis nudge styles the sans titles.
     static func titleFont(for key: String?) -> (CGFloat) -> Font {
         switch (key ?? "spectral").lowercased() {
         case "spectral":
             return { Font.custom("Spectral-Italic", size: $0, relativeTo: .largeTitle) }
         case "eb-garamond":
-            return { Font.system(size: $0, weight: .regular, design: .serif).italic() }
+            return { Font.custom("EBGaramond-Italic", size: $0, relativeTo: .largeTitle) }
         case "cardo":
-            return { Font.system(size: $0, weight: .regular, design: .serif).italic() }
+            return { Font.custom("Cardo-Italic", size: $0, relativeTo: .largeTitle) }
         case "cormorant-garamond":
-            return { Font.system(size: $0, weight: .light, design: .serif).italic() }
+            return { Font.custom("CormorantGaramond-LightItalic", size: $0, relativeTo: .largeTitle) }
         case "work-sans":
-            return { Font.system(size: $0, weight: .semibold, design: .default) }
+            return { Font.custom("WorkSans-Regular", size: $0, relativeTo: .largeTitle).weight(.semibold) }
         case "inter":
             fallthrough
         default:
-            return { Font.system(size: $0, weight: .semibold, design: .default) }
+            return { Font.custom("Inter-Regular", size: $0, relativeTo: .largeTitle).weight(.semibold) }
         }
     }
 
@@ -90,10 +96,18 @@ enum MerchantTheme {
         switch (key ?? "spectral").lowercased() {
         case "spectral":
             return { Font.custom("Spectral-Regular", size: $0, relativeTo: .body) }
-        case "eb-garamond", "cardo", "cormorant-garamond":
-            return { Font.system(size: $0, weight: .regular, design: .serif) }
+        case "eb-garamond":
+            return { Font.custom("EBGaramond-Regular", size: $0, relativeTo: .body) }
+        case "cardo":
+            return { Font.custom("Cardo-Regular", size: $0, relativeTo: .body) }
+        case "cormorant-garamond":
+            return { Font.custom("CormorantGaramond-Light", size: $0, relativeTo: .body) }
+        case "work-sans":
+            return { Font.custom("WorkSans-Regular", size: $0, relativeTo: .body) }
+        case "inter":
+            fallthrough
         default:
-            return { Font.system(size: $0, weight: .regular, design: .default) }
+            return { Font.custom("Inter-Regular", size: $0, relativeTo: .body) }
         }
     }
 

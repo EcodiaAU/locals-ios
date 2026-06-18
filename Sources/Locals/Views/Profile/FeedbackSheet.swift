@@ -35,6 +35,8 @@ struct FeedbackSheet: View {
                         Eyebrow(text: "How to reach you (optional)")
                         TextField(auth.currentUser?.email ?? "you@somewhere.com", text: $contact)
                             .textInputAutocapitalization(.never)
+                            .keyboardType(.emailAddress)
+                            .autocorrectionDisabled()
                             .padding(.horizontal, DesignTokens.Space.md)
                             .frame(height: 52)
                             .background(LocalsTheme.bgElevated)
