@@ -61,12 +61,10 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        NSLocationWhenInUseUsageDescription: "Locals uses your location to show businesses near you and recognise when you visit one. We never share or sell your location."
+        NSLocationWhenInUseUsageDescription: "Locals uses your location to centre the map on independent businesses near you. Location is used only while the app is open and is never shared or sold."
         NSCameraUsageDescription: "Locals uses the camera so staff can scan customer redemption codes at the counter."
         NSPhotoLibraryUsageDescription: "Locals lets you choose photos from your library when listing or updating your business."
         ITSAppUsesNonExemptEncryption: false
-        UIBackgroundModes:
-          - location
         CFBundleURLTypes:
           - CFBundleTypeRole: Editor
             CFBundleURLName: au.ecodia.local

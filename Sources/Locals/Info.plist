@@ -46,7 +46,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Locals uses the camera so staff can scan customer redemption codes at the counter.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Locals uses your location to show businesses near you and recognise when you visit one. We never share or sell your location.</string>
+	<string>Locals uses your location to centre the map on independent businesses near you. Location is used only while the app is open and is never shared or sold.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Locals lets you choose photos from your library when listing or updating your business.</string>
 	<key>UIAppFonts</key>
@@ -54,10 +54,6 @@
 		<string>Spectral-Regular.ttf</string>
 		<string>Spectral-Italic.ttf</string>
 		<string>Spectral-SemiBold.ttf</string>
-	</array>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>location</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict>

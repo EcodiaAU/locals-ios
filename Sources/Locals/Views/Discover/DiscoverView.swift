@@ -62,7 +62,7 @@ struct DiscoverView: View {
                     let bottomInset = geo.safeAreaInsets.bottom
                     let bottomGap: CGFloat = DesignTokens.Space.sm
                     let available = geo.size.height
-                    let peek: CGFloat = 168
+                    let peek: CGFloat = 188
                     let mediumHeight = max(peek, available * 0.46)
                     let expandedHeight = max(mediumHeight, available * 0.86)
                     let targetHeight = height(for: sheetFraction, peek: peek, medium: mediumHeight, expanded: expandedHeight)
@@ -132,10 +132,15 @@ struct DiscoverView: View {
     @GestureState private var dragTranslation: CGFloat = 0
 
     private var dragHandle: some View {
+        // Generous breathing room above and below the grabber so the sheet
+        // top reads as a calm, deliberate surface rather than a cramped lip.
+        // (2026-06-18 Tate: "give the discover page more space above and
+        // below drag handle to make it feel much nicer.")
         Capsule()
             .fill(Color.gray.opacity(0.35))
             .frame(width: 40, height: 5)
-            .padding(.vertical, DesignTokens.Space.sm)
+            .padding(.top, DesignTokens.Space.xl)
+            .padding(.bottom, DesignTokens.Space.lg)
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
     }
@@ -225,7 +230,7 @@ struct DiscoverView: View {
 
     // MARK: - Sheet content (chip rail + list)
 
-    // Horizontal scrolling chip rail — All + each merchant category.
+    // Horizontal scrolling chip rail - All + each merchant category.
     // Mirrors locals-android `CategoryRail` 1:1: single primary control,
     // selected chip in ink, unselected in soft gray. Replaces the older
     // header + Filter dropdown which Tate flagged as visually busy.
@@ -259,7 +264,7 @@ struct DiscoverView: View {
             if loading && nearby.isEmpty {
                 HStack { ProgressView(); Spacer() }
             } else if filtered.isEmpty {
-                // Left-aligned, plain sans empty state — matches Android's
+                // Left-aligned, plain sans empty state - matches Android's
                 // EmptyListBlock. The old centered serif-italic version read
                 // as "wack" / over-designed for a simple bottom sheet.
                 VStack(alignment: .leading, spacing: 4) {
