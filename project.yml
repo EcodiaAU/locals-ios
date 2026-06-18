@@ -74,6 +74,14 @@ targets:
           - Spectral-Regular.ttf
           - Spectral-Italic.ttf
           - Spectral-SemiBold.ttf
+          - EBGaramond-Var.ttf
+          - EBGaramond-Italic-Var.ttf
+          - Cardo-Regular.ttf
+          - Cardo-Italic.ttf
+          - CormorantGaramond-Var.ttf
+          - CormorantGaramond-Italic-Var.ttf
+          - WorkSans-Var.ttf
+          - Inter-Var.ttf
         LocalsSupabaseURL: https://dpumgcxpwfigtpotayjq.supabase.co
         LocalsSupabaseAnonKey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwdW1nY3hwd2ZpZ3Rwb3RheWpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyOTEwODIsImV4cCI6MjA5NTg2NzA4Mn0.8FhySa1u2mb5z_3g1wFVwQFdgFqsWpZeKGy0gKItMP4
     settings:

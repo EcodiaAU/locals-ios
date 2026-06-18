@@ -54,6 +54,14 @@
 		<string>Spectral-Regular.ttf</string>
 		<string>Spectral-Italic.ttf</string>
 		<string>Spectral-SemiBold.ttf</string>
+		<string>EBGaramond-Var.ttf</string>
+		<string>EBGaramond-Italic-Var.ttf</string>
+		<string>Cardo-Regular.ttf</string>
+		<string>Cardo-Italic.ttf</string>
+		<string>CormorantGaramond-Var.ttf</string>
+		<string>CormorantGaramond-Italic-Var.ttf</string>
+		<string>WorkSans-Var.ttf</string>
+		<string>Inter-Var.ttf</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict>
