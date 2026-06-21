@@ -79,6 +79,7 @@ struct DiscoverView: View {
                         }
                         .scrollBounceBehavior(.basedOnSize)
                         .scrollDisabled(sheetFraction < 0.85)
+                        .mask(listFadeMask)
                     }
                     .frame(height: liveHeight, alignment: .top)
                     .frame(maxWidth: .infinity)
@@ -142,6 +143,24 @@ struct DiscoverView: View {
             .padding(.bottom, DesignTokens.Space.lg)
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
+    }
+
+    // Soft haze at the scroll's bottom edge so cards dissolve into the sheet
+    // surface instead of hard-clipping at the rounded rectangle. (2026-06-22
+    // Tate: the hard bottom section "looks a bit odd, would rather a fade or
+    // haze ... so its not an instant clip for any cards in the sheet".) The
+    // mask reveals the .regularMaterial behind the faded card, reading as a
+    // smooth, native dissolve rather than a hard cut.
+    private var listFadeMask: some View {
+        VStack(spacing: 0) {
+            Rectangle().fill(Color.black)
+            LinearGradient(
+                colors: [Color.black, Color.black.opacity(0)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: DesignTokens.Space.huge)
+        }
     }
 
     private func height(for fraction: CGFloat, peek: CGFloat, medium: CGFloat, expanded: CGFloat) -> CGFloat {
