@@ -60,6 +60,11 @@ struct DiscoverView: View {
                 GeometryReader { geo in
                     let bottomInset = geo.safeAreaInsets.bottom
                     let bottomGap: CGFloat = DesignTokens.Space.sm
+                    // The floating iOS 26 tab pill establishes this bottom inset.
+                    // It used to be dead external padding below the scroll (a blank
+                    // material "scaffold" that clipped cards high above the pill);
+                    // it now lives inside the scroll so cards run down to the pill.
+                    let pillBand = bottomInset + bottomGap
                     let available = geo.size.height
                     let peek: CGFloat = 188
                     let mediumHeight = max(peek, available * 0.46)
@@ -75,15 +80,22 @@ struct DiscoverView: View {
                         ScrollView {
                             list
                                 .padding(.horizontal, DesignTokens.Space.lg)
-                                .padding(.bottom, DesignTokens.Space.lg)
+                                // Bottom inset lives INSIDE the scroll now so the last
+                                // card scrolls clear above the floating tab pill while
+                                // earlier cards run down under it and haze out.
+                                .padding(.bottom, DesignTokens.Space.lg + pillBand)
                         }
                         .scrollBounceBehavior(.basedOnSize)
                         .scrollDisabled(sheetFraction < 0.85)
-                        .mask(listFadeMask)
+                        .mask(listFadeMask(pillBand: pillBand))
                     }
-                    .frame(height: liveHeight, alignment: .top)
+                    // Extend the content frame down through the pill band so the scroll
+                    // fills to the screen edge instead of stopping above the pill and
+                    // leaving a blank "scaffold". Overall sheet height is unchanged (the
+                    // band moved from external padding into the frame); the material
+                    // still bleeds past the pill via .ignoresSafeArea below.
+                    .frame(height: liveHeight + pillBand, alignment: .top)
                     .frame(maxWidth: .infinity)
-                    .padding(.bottom, bottomInset + bottomGap)
                     .background(
                         .regularMaterial,
                         in: UnevenRoundedRectangle(
@@ -151,15 +163,20 @@ struct DiscoverView: View {
     // haze ... so its not an instant clip for any cards in the sheet".) The
     // mask reveals the .regularMaterial behind the faded card, reading as a
     // smooth, native dissolve rather than a hard cut.
-    private var listFadeMask: some View {
+    private func listFadeMask(pillBand: CGFloat) -> some View {
         VStack(spacing: 0) {
             Rectangle().fill(Color.black)
+            // Fade cards out over ~32pt as they approach the floating tab pill.
             LinearGradient(
                 colors: [Color.black, Color.black.opacity(0)],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .frame(height: DesignTokens.Space.huge)
+            // Keep content fully hidden across the band the pill occupies so
+            // nothing peeks beside or under the pill at the screen edge.
+            Rectangle().fill(Color.clear)
+                .frame(height: pillBand)
         }
     }
 
