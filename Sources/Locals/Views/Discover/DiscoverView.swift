@@ -80,14 +80,16 @@ struct DiscoverView: View {
                         ScrollView {
                             list
                                 .padding(.horizontal, DesignTokens.Space.lg)
-                                // Bottom inset lives INSIDE the scroll now so the last
-                                // card scrolls clear above the floating tab pill while
-                                // earlier cards run down under it and haze out.
+                                // Trailing room so the LAST card can rest clear above
+                                // the pill at scroll-end. Mid-scroll, earlier cards run
+                                // straight down behind the translucent glass pill and
+                                // off the screen edge - the pill's own glass blur is the
+                                // haze, so no mask is needed (and a mask would re-create
+                                // the blank "scaffold" by hiding cards behind the pill).
                                 .padding(.bottom, DesignTokens.Space.lg + pillBand)
                         }
                         .scrollBounceBehavior(.basedOnSize)
                         .scrollDisabled(sheetFraction < 0.85)
-                        .mask(listFadeMask(pillBand: pillBand))
                     }
                     // Extend the content frame down through the pill band so the scroll
                     // fills to the screen edge instead of stopping above the pill and
@@ -155,29 +157,6 @@ struct DiscoverView: View {
             .padding(.bottom, DesignTokens.Space.lg)
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
-    }
-
-    // Soft haze at the scroll's bottom edge so cards dissolve into the sheet
-    // surface instead of hard-clipping at the rounded rectangle. (2026-06-22
-    // Tate: the hard bottom section "looks a bit odd, would rather a fade or
-    // haze ... so its not an instant clip for any cards in the sheet".) The
-    // mask reveals the .regularMaterial behind the faded card, reading as a
-    // smooth, native dissolve rather than a hard cut.
-    private func listFadeMask(pillBand: CGFloat) -> some View {
-        VStack(spacing: 0) {
-            Rectangle().fill(Color.black)
-            // Fade cards out over ~32pt as they approach the floating tab pill.
-            LinearGradient(
-                colors: [Color.black, Color.black.opacity(0)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: DesignTokens.Space.huge)
-            // Keep content fully hidden across the band the pill occupies so
-            // nothing peeks beside or under the pill at the screen edge.
-            Rectangle().fill(Color.clear)
-                .frame(height: pillBand)
-        }
     }
 
     private func height(for fraction: CGFloat, peek: CGFloat, medium: CGFloat, expanded: CGFloat) -> CGFloat {
