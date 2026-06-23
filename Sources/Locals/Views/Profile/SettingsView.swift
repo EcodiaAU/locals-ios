@@ -31,6 +31,17 @@ struct SettingsView: View {
                         }
                     }
                 }
+
+                // The Ecodia attribution mark. Receding, italic serif, no
+                // underline (plain button style strips the default Link tint
+                // and underline). EB Garamond is not bundled on iOS, so the
+                // bundled italic serif (Spectral-Italic) renders the same
+                // receding register.
+                Section {
+                    EcodiaAttribution()
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .listRowBackground(Color.clear)
+                }
             }
             .scrollContentBackground(.hidden)
             .background(LocalsTheme.bg)
