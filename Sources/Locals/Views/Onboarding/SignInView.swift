@@ -28,9 +28,11 @@ struct SignInView: View {
                             .foregroundStyle(LocalsTheme.fgMuted)
                     }
 
-                    appleButton
+                    friendBlock
 
                     divider
+
+                    appleButton
 
                     magicLinkBlock
 
@@ -50,6 +52,34 @@ struct SignInView: View {
                     Button("Close") { dismiss() }
                 }
             }
+        }
+    }
+
+    // Connect your Friend - the canonical Ecodia identity, primary path.
+    // One sign-in that travels across Locals and the rest of Ecodia.
+    private var friendBlock: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Space.sm) {
+            Button {
+                Task { await signInFriend() }
+            } label: {
+                HStack(spacing: DesignTokens.Space.sm) {
+                    HStack(spacing: 4) {
+                        Circle().fill(LocalsTheme.mustard).frame(width: 7, height: 7)
+                        Circle().fill(LocalsTheme.onAccent.opacity(0.9)).frame(width: 7, height: 7)
+                    }
+                    if inFlight {
+                        ProgressView().tint(LocalsTheme.onAccent)
+                    } else {
+                        Text("Connect your Friend")
+                    }
+                }
+            }
+            .buttonStyle(.localsPrimary)
+            .disabled(inFlight)
+
+            Text("Your Ecodia sign-in. One identity across Locals and your Friend.")
+                .font(LocalsTheme.body(DesignTokens.Size.sm))
+                .foregroundStyle(LocalsTheme.fgMuted)
         }
     }
 
@@ -127,6 +157,22 @@ struct SignInView: View {
                 .buttonStyle(.localsPrimary)
                 .disabled(inFlight || email.isEmpty)
             }
+        }
+    }
+
+    private func signInFriend() async {
+        inFlight = true
+        defer { inFlight = false }
+        do {
+            try await auth.signInWithFriend()
+            error = nil
+            dismiss()
+        } catch is CancellationError {
+            // User dismissed the Friend sheet; leave the surface untouched.
+        } catch let err as ASWebAuthenticationSessionError where err.code == .canceledLogin {
+            // User cancelled the ASWebAuthenticationSession; not an error state.
+        } catch {
+            self.error = error.localizedDescription
         }
     }
 
