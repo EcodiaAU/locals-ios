@@ -37,6 +37,26 @@ final class AuthService: ObservableObject {
         try? await client.auth.session.accessToken
     }
 
+    /// The local Locals Supabase user id, if signed in.
+    var localUserID: String? {
+        currentUser?.id.uuidString
+    }
+
+    /// The canonical Ecodia Friend account id (`app_metadata.friend_id`), written
+    /// by the Locals friend_id trigger pair after a Connect-your-Friend login.
+    /// Its presence is the "Friend connected" signal the Local Guide gate reads,
+    /// and it is what RevenueCat is identified with so the reconciler keys the
+    /// central subscription row on the same person (Friend-IAP wave 3).
+    var friendID: String? {
+        guard let raw = currentUser?.appMetadata["friend_id"] else { return nil }
+        // Supabase-swift models JSON as AnyJSON; friend_id is a string.
+        if let s = raw.stringValue, !s.isEmpty { return s }
+        return nil
+    }
+
+    /// True when this Locals account is federated to an Ecodia Friend.
+    var isFriendConnected: Bool { friendID != nil }
+
     func signOut() async {
         try? await client.auth.signOut()
         currentUser = nil

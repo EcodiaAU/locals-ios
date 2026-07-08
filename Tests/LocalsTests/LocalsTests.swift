@@ -5,9 +5,9 @@ final class LocalsTests: XCTestCase {
 
     func testDesignTokensLoad() {
         // Smoke test: the DesignTokens namespace compiles + the canonical Locals palette resolves.
-        XCTAssertNotNil(DesignTokens.Palette.mustard)
-        XCTAssertNotNil(DesignTokens.Palette.cream)
-        XCTAssertNotNil(DesignTokens.Palette.ink)
+        XCTAssertNotNil(DesignTokens.Brand.mustard)
+        XCTAssertNotNil(DesignTokens.Brand.cream)
+        XCTAssertNotNil(DesignTokens.Brand.ink)
     }
 
     func testMerchantModelDecodes() throws {

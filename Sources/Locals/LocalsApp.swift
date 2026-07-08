@@ -11,6 +11,7 @@ struct LocalsApp: App {
     @StateObject private var owners = OwnerMerchantService()
     @StateObject private var billing = BillingService()
     @StateObject private var feedback = FeedbackService()
+    @StateObject private var purchases = FriendPurchases()
 
     var body: some Scene {
         WindowGroup {
@@ -24,6 +25,7 @@ struct LocalsApp: App {
                 .environmentObject(owners)
                 .environmentObject(billing)
                 .environmentObject(feedback)
+                .environmentObject(purchases)
                 .tint(LocalsTheme.accent)
                 .task {
                     // Auth bootstrap is now merchant-only. The customer side
@@ -31,12 +33,25 @@ struct LocalsApp: App {
                     // detail. Sign-in is only invoked when the user taps
                     // "Add your business" or opens the Merchant tab.
                     auth.onSignIn = { _ in
-                        Task { await owners.refresh() }
+                        Task {
+                            await owners.refresh()
+                            // Re-key RevenueCat to the Friend account id whenever a
+                            // sign-in lands (Friend-IAP wave 3). friend_id populates
+                            // in app_metadata after a Connect-your-Friend login.
+                            await purchases.logIn(friendID: auth.friendID, localUserID: auth.localUserID)
+                            await purchases.refresh()
+                        }
                     }
+                    // Configure RevenueCat with the platform public key (no-op if
+                    // the key is not baked). Identify + refresh entitlement from the
+                    // restored session so the Local Guide gate is correct on launch.
+                    purchases.configure(apiKey: LocalsConfig.revenueCatIOSKey)
                     await auth.bootstrap()
                     if auth.currentUser != nil {
                         await owners.refresh()
+                        await purchases.logIn(friendID: auth.friendID, localUserID: auth.localUserID)
                     }
+                    await purchases.refresh()
                     location.requestPermissionIfNeeded()
                 }
                 .onOpenURL { url in

@@ -29,6 +29,9 @@ packages:
   Nuke:
     url: https://github.com/kean/Nuke
     from: "12.8.0"
+  RevenueCat:
+    url: https://github.com/RevenueCat/purchases-ios
+    from: "5.0.0"
 
 targets:
   Locals:
@@ -51,6 +54,12 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleIconName: AppIcon
         LSRequiresIPhoneOS: true
+        # RevenueCat public iOS SDK key (Friend-IAP wave 3, RC app app5e43fcc765).
+        # Public SDK keys ship in every app binary and are not secret - this is the
+        # same public-by-design convention as LocalsSupabaseAnonKey below, kept as a
+        # literal so xcodegen regenerates deterministically. The value also lives in
+        # ~/PRIVATE/ecodia-creds/revenuecat.env as REVENUECAT_IOS_PUBLIC_SDK_KEY_LOCALS.
+        LocalsRevenueCatIOSKey: appl_EqHISNammWvepRQepaLgWQprxAF
         UILaunchScreen:
           UIColorName: LaunchBg
           UIImageName: LaunchSplash
@@ -102,6 +111,8 @@ targets:
         product: Nuke
       - package: Nuke
         product: NukeUI
+      - package: RevenueCat
+        product: RevenueCat
     entitlements:
       path: Sources/Locals/Locals.entitlements
       properties:
@@ -109,6 +120,12 @@ targets:
           - Default
 
   LocalsTests:
+    # Host-less logic-test bundle. A TEST_HOST/BUNDLE_LOADER injection into the
+    # Locals app made the Xcode build graph emit Locals.swiftmodule twice ("Multiple
+    # commands produce ... Locals.swiftmodule") because the app was built both as the
+    # host and as this target's dependency; the resolver fixtures are pure logic and
+    # only need `@testable import Locals`, so the module link via the target
+    # dependency is sufficient and the host is dropped.
     type: bundle.unit-test
     platform: iOS
     sources:
@@ -118,6 +135,10 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: au.ecodia.local.tests
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Locals.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Locals"
-        BUNDLE_LOADER: "$(TEST_HOST)"
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        GENERATE_INFOPLIST_FILE: YES
+        # The project-level PRODUCT_NAME=Locals is inherited by every target; left
+        # unset here the test bundle emits its module as Locals.swiftmodule too and
+        # collides with the app's ("Multiple commands produce ... Locals.swiftmodule").
+        PRODUCT_NAME: LocalsTests
+        PRODUCT_MODULE_NAME: LocalsTests

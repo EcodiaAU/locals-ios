@@ -17,6 +17,18 @@ enum LocalsConfig {
         Bundle.main.object(forInfoDictionaryKey: "LocalsSupabaseAnonKey") as? String
         ?? "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwdW1nY3hwd2ZpZ3Rwb3RheWpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyOTEwODIsImV4cCI6MjA5NTg2NzA4Mn0.8FhySa1u2mb5z_3g1wFVwQFdgFqsWpZeKGy0gKItMP4"
     }()
+
+    /// RevenueCat public iOS SDK key (`appl_…`), baked into Info.plist by
+    /// project.yml from the `LOCALS_REVENUECAT_IOS_KEY` build environment at
+    /// xcodegen time (Friend-IAP wave 3). Public SDK keys ship in the binary and
+    /// are not secret, but the value stays out of git via the gitignored generated
+    /// project. Empty when unset - RevenueCat then stays unconfigured and the
+    /// Local Guide simply remains gated, so a fresh clone still builds and runs.
+    static let revenueCatIOSKey: String = {
+        let v = Bundle.main.object(forInfoDictionaryKey: "LocalsRevenueCatIOSKey") as? String ?? ""
+        // xcodegen leaves an unexpanded ${VAR} literal when the env is unset.
+        return v.hasPrefix("appl_") ? v : ""
+    }()
 }
 
 extension SupabaseClient {

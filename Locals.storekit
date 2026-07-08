@@ -1,0 +1,44 @@
+{
+  "identifier" : "6C5F9A20-LOCALS-FRIEND-IAP",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : {
+    "_applicationInternalID" : "6775331079",
+    "_developerTeamID" : "86PUY7393S",
+    "_lastSynchronizedDate" : 0
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "22217385",
+      "localizations" : [],
+      "name" : "Friend",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "19.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6788757585",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Your Ecodia Friend as your local guide in Locals.",
+              "displayName" : "A little",
+              "locale" : "en_AU"
+            }
+          ],
+          "productID" : "friend_a_little_monthly_locals",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Friend - A little",
+          "subscriptionGroupID" : "22217385",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}
