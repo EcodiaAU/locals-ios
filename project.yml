@@ -52,8 +52,8 @@ targets:
         CFBundleIconName: AppIcon
         LSRequiresIPhoneOS: true
         UILaunchScreen:
-          UIColorName: ""
-          UIImageName: ""
+          UIColorName: LaunchBg
+          UIImageName: LaunchSplash
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UISupportedInterfaceOrientations~ipad:

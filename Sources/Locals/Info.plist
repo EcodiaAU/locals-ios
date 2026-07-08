@@ -66,9 +66,9 @@
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
-		<string></string>
+		<string>LaunchBg</string>
 		<key>UIImageName</key>
-		<string></string>
+		<string>LaunchSplash</string>
 	</dict>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
