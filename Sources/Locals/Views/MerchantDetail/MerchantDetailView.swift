@@ -1,4 +1,5 @@
 import SwiftUI
+import GloveboxLink
 
 /// The merchant detail surface. Renders in the merchant's chosen theme -
 /// full-bleed background, headline in their font, rewards inheriting the
@@ -19,6 +20,9 @@ struct MerchantDetailView: View {
     @State private var error: String?
     @State private var showSignIn = false
     @State private var showCreateMerchant = false
+    /// The merchant's point, for the Glovebox handoff. Fetched separately because
+    /// `merchants.geo` is PostGIS EWKB that the `Merchant` model does not carry.
+    @State private var coords: (lat: Double, lng: Double)?
 
     private var theme: MerchantTheme.Resolved {
         MerchantTheme.resolve(color: merchant?.theme_color, font: merchant?.theme_font)
@@ -29,6 +33,7 @@ struct MerchantDetailView: View {
             VStack(alignment: .leading, spacing: DesignTokens.Space.xxl) {
                 hero
                 aboutBlock
+                directionsBlock
                 ownerNote
                 rewardsBlock
                 hoursBlock
@@ -108,6 +113,54 @@ struct MerchantDetailView: View {
             }
             .padding(.horizontal, DesignTokens.Space.lg)
         }
+    }
+
+    /// "Open in Glovebox" - the directions handoff, and the first NATIVE sender in
+    /// the fleet.
+    ///
+    /// The URL is built by `GloveboxLink` (the @ecodia/glovebox-link package), the
+    /// same contract locals-web uses, so the two senders cannot drift apart.
+    ///
+    /// It opens the UNIVERSAL LINK rather than the `au.ecodia.roam://` scheme on
+    /// purpose. With Glovebox installed, iOS hands the link to the app, which
+    /// builds a real trip from the traveller's location and makes it active, which
+    /// is also what puts it on a CarPlay head unit. Without Glovebox installed the
+    /// same URL opens the Glovebox web app, whereas the custom scheme would open
+    /// nothing at all, so no "is it installed" check is needed or wanted.
+    ///
+    /// Hidden entirely when the merchant has no point on file. A directions button
+    /// that cannot give directions is worse than no button.
+    @ViewBuilder
+    private var directionsBlock: some View {
+        if let m = merchant, let url = gloveboxURL(for: m) {
+            VStack(alignment: .leading, spacing: DesignTokens.Space.sm) {
+                Eyebrow(text: "Directions")
+                Link(destination: url) {
+                    HStack(spacing: DesignTokens.Space.sm) {
+                        Image(systemName: "location.north.line.fill")
+                        Text("Open in Glovebox")
+                            .font(LocalsTheme.body(DesignTokens.Size.base, weight: .semibold))
+                    }
+                    .foregroundStyle(theme.background)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, DesignTokens.Space.md)
+                    .background(
+                        Capsule().fill(theme.foreground)
+                    )
+                }
+                .simultaneousGesture(TapGesture().onEnded { Haptics.tap() })
+                .accessibilityLabel("Open directions to \(m.name) in Glovebox")
+            }
+            .padding(.horizontal, DesignTokens.Space.lg)
+        }
+    }
+
+    /// The handoff URL, or nil when the merchant has no coordinates.
+    private func gloveboxURL(for m: Merchant) -> URL? {
+        guard let coords else { return nil }
+        return GloveboxLink.directionsURL(
+            .init(toLat: coords.lat, toLng: coords.lng, toName: m.name)
+        )
     }
 
     @ViewBuilder
@@ -286,9 +339,13 @@ struct MerchantDetailView: View {
             async let photos = merchants.photos(merchantId: m.id)
             async let rewardsRows = rewards.live(merchantId: m.id)
             async let signal = merchants.sustainabilitySignal(merchantId: m.id)
+            // Best-effort: a merchant with no point simply gets no directions
+            // button, which must never take the whole detail page down with it.
+            async let point = merchants.coordinates(slug: m.slug)
             self.photos = try await photos
             self.liveRewards = try await rewardsRows
             self.signals = (try? await signal) ?? []
+            self.coords = (try? await point) ?? nil
         } catch {
             self.error = error.localizedDescription
         }

@@ -32,6 +32,12 @@ packages:
   RevenueCat:
     url: https://github.com/RevenueCat/purchases-ios
     from: "5.0.0"
+  # The "Open in Glovebox" contract. The SAME package glovebox-ios parses with and
+  # locals-web builds with, so the URL Locals emits and the URL Glovebox receives
+  # cannot drift apart. Foundation only, no transitive dependencies.
+  GloveboxLink:
+    url: https://github.com/EcodiaAU/glovebox-link
+    from: "1.0.0"
 
 targets:
   Locals:
@@ -113,6 +119,8 @@ targets:
         product: NukeUI
       - package: RevenueCat
         product: RevenueCat
+      - package: GloveboxLink
+        product: GloveboxLink
     entitlements:
       path: Sources/Locals/Locals.entitlements
       properties:

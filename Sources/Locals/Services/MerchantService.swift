@@ -82,6 +82,30 @@ final class MerchantService: ObservableObject {
         return result
     }
 
+    // MARK: - Coordinates
+
+    /// A merchant's coordinates, for the "Open in Glovebox" handoff.
+    ///
+    /// `merchants.geo` is a PostGIS geography that PostgREST hands back as opaque
+    /// EWKB, so the `Merchant` model deliberately does not carry it. The
+    /// `merchant_lonlat` RPC (migration 0013, granted to `anon`) returns plain
+    /// lat/lng, and locals-web already reads exactly this for the same purpose.
+    ///
+    /// Returns nil when the merchant has no point on file, so the caller simply
+    /// does not offer directions rather than offering a route to (0, 0).
+    func coordinates(slug: String) async throws -> (lat: Double, lng: Double)? {
+        struct Params: Encodable { let p_slug: String }
+        struct LonLat: Decodable { let lat: Double; let lng: Double }
+
+        let rows: [LonLat] = try await client
+            .rpc("merchant_lonlat", params: Params(p_slug: slug))
+            .execute()
+            .value
+
+        guard let first = rows.first else { return nil }
+        return (first.lat, first.lng)
+    }
+
     // MARK: - Photos
 
     func photos(merchantId: UUID) async throws -> [MerchantPhoto] {
