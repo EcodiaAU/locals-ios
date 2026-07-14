@@ -65,6 +65,11 @@ struct MerchantNear: Codable, Identifiable, Hashable {
     let theme_color: String?
     let theme_font: String?
     let hero_photo_path: String?
+    // Real place coordinates from the merchants_near RPC (ST_Y/ST_X of the
+    // PostGIS point, added in migration 0014). Optional so an older cached
+    // row still decodes; when present they are the pin's true position.
+    let mlat: Double?
+    let mlng: Double?
 
     var distanceLabel: String {
         if distance_m < 950 { return "\(Int((distance_m / 10).rounded()) * 10) m" }
@@ -78,10 +83,10 @@ struct MerchantNear: Codable, Identifiable, Hashable {
     }
 }
 
-// Optional - the geo field on `merchants` is a PostGIS geography(point).
-// We do not read it on the client: the lat/lng come back through the
-// merchants_near RPC as `distance_m` from the user. The merchant detail
-// view never needs the raw point; map pins fetch from the RPC.
+// The geo field on `merchants` is a PostGIS geography(point). The
+// merchants_near RPC returns both the `distance_m` from the user AND the
+// real point as `mlat`/`mlng` (migration 0014), so map pins render at the
+// merchant's actual location. The merchant detail view never needs the raw point.
 
 struct MerchantPhoto: Codable, Identifiable, Hashable {
     let id: UUID

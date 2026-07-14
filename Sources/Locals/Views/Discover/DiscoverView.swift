@@ -338,18 +338,15 @@ struct DiscoverView: View {
         return CLLocationCoordinate2D(latitude: lat, longitude: lng)
     }
 
+    // A merchant's true position comes straight from the merchants_near RPC
+    // (mlat/mlng, migration 0014). Fall back to the user's location only if a
+    // row somehow decoded without coordinates, so a pin never lands at a
+    // fabricated bearing offset from where the place actually is.
     private func coordinate(for m: MerchantNear) -> CLLocationCoordinate2D {
-        let user = location.coordinate
-        let metres = m.distance_m
-        let hash = abs(m.id.hashValue)
-        let bearing = Double(hash % 360) * .pi / 180
-        let earthR = 6_378_137.0
-        let dLat = metres * cos(bearing) / earthR
-        let dLng = metres * sin(bearing) / (earthR * cos(user.latitude * .pi / 180))
-        return CLLocationCoordinate2D(
-            latitude: user.latitude + dLat * 180 / .pi,
-            longitude: user.longitude + dLng * 180 / .pi
-        )
+        if let lat = m.mlat, let lng = m.mlng {
+            return CLLocationCoordinate2D(latitude: lat, longitude: lng)
+        }
+        return location.coordinate
     }
 
     // MARK: - Interactions
