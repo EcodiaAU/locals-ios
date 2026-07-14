@@ -19,8 +19,8 @@ struct SettingsView: View {
                 Section("About") {
                     LabeledContent("Version", value: appVersion)
                     Link("locals.ecodia.au", destination: URL(string: "https://locals.ecodia.au")!)
-                    Link("Terms", destination: URL(string: "https://locals.ecodia.au/terms")!)
-                    Link("Privacy", destination: URL(string: "https://locals.ecodia.au/privacy")!)
+                    Link("Terms", destination: URL(string: "https://locals.ecodia.au/legal#terms")!)
+                    Link("Privacy", destination: URL(string: "https://locals.ecodia.au/legal#privacy")!)
                     Link("Email us", destination: URL(string: "mailto:code@ecodia.au")!)
                 }
 
@@ -58,7 +58,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This permanently removes your account, your business listings, and any active billing. You can't undo this.")
+                Text("This permanently removes your account and your personal data: your favourites, your redemptions, your check-ins, and your sustainability confirmations. Any business listing you manage stays on Locals (a listing is public information others rely on); your access to it is removed. You can't undo this.")
             }
         }
     }
