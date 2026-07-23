@@ -17,7 +17,7 @@ final class FriendPurchases: ObservableObject {
     /// True when the on-device RevenueCat `friend` entitlement is active. This is
     /// the authoritative StoreKit-bound signal the Local Guide gate reads.
     @Published private(set) var isEntitled = false
-    /// Localized store price (e.g. "A$19.99"), loaded from the offering. Nil until
+    /// Localized store price (e.g. "A$29.99"), loaded from the offering. Nil until
     /// the offering resolves (needs the store product synced to RevenueCat).
     @Published private(set) var localizedPrice: String?
     /// True once RevenueCat is configured and the offering fetch has completed
@@ -30,9 +30,9 @@ final class FriendPurchases: ObservableObject {
     private var currentAppUserID: String?
 
     /// The value the paywall shows: the resolved store price if available, else
-    /// the fixed A$19.99 copy so the sheet is never blank while the offering loads.
+    /// the fixed A$29.99 copy so the sheet is never blank while the offering loads.
     var displayPrice: String {
-        localizedPrice ?? "A$19.99"
+        localizedPrice ?? "A$29.99"
     }
 
     // MARK: - Configuration
@@ -109,7 +109,7 @@ final class FriendPurchases: ObservableObject {
                 localizedPrice = pkg.storeProduct.localizedPriceString
             }
         } catch {
-            // price falls back to displayPrice's A$19.99 copy
+            // price falls back to displayPrice's A$29.99 copy
         }
     }
 

@@ -3,7 +3,7 @@ import Foundation
 /// Pure, SDK-free entitlement resolution for the Friend "A little" subscription.
 ///
 /// Friend-IAP wave 3 (2026-07-08). Native Locals sells the Friend "A little"
-/// plan (A$19.99/mo auto-renewable) via Apple IAP / Play Billing through
+/// plan (A$29.99/mo auto-renewable) via Apple IAP / Play Billing through
 /// RevenueCat. This file is the Swift port of the glovebox `resolveUnlock` /
 /// `rcFriendAppUserId` spec (glovebox `src/lib/paywall/tripGate.ts`) - it holds
 /// NO RevenueCat import so it is unit-testable against fixtures the same way the
@@ -34,7 +34,7 @@ enum FriendPlan {
 
     /// Sub copy - App Store / Play require an auto-renewal disclosure and forbid
     /// "lifetime/forever" language on an auto-renewable subscription.
-    static let priceLine = "A$19.99 per month. cancel anytime."
+    static let priceLine = "A$29.99 per month. cancel anytime."
     static let renewalDisclosure =
         "Your subscription renews automatically each month until cancelled. Manage or cancel any time in your App Store or Google Play account settings."
 }

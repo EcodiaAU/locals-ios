@@ -6,7 +6,7 @@ import SwiftUI
 /// Gate (client-side, on the authoritative on-device RevenueCat `friend`
 /// entitlement + a linked Friend):
 ///   1. no Friend linked   -> connect-your-Friend prompt
-///   2. linked, unentitled -> the native paywall (buys the A$19.99/mo sub)
+///   2. linked, unentitled -> the native paywall (buys the A$29.99/mo sub)
 ///   3. linked + entitled  -> the guide chat (posts to the `local-guide` edge fn)
 ///
 /// Presented as a sheet from the floating guide button on Discover.

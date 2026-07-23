@@ -5,7 +5,7 @@ import SwiftUI
 /// RevenueCat `default` offering's `$rc_monthly` package via the native system
 /// purchase sheet - never a web checkout link (upgrades to higher tiers happen
 /// on Friend WEB only, and this never touches Stripe). Copy carries the fixed
-/// A$19.99/mo line and the App Store / Google Play auto-renewal disclosure, and
+/// A$29.99/mo line and the App Store / Google Play auto-renewal disclosure, and
 /// never uses "lifetime/forever" language.
 struct PaywallView: View {
     @EnvironmentObject var purchases: FriendPurchases
